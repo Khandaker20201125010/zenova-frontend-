@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Button } from "../ui/button"
 import { ArrowRight, Star } from "lucide-react"
 import { useProductsQuery } from "../../hooks/use-query"
+import { ProductCard } from "../products/product-card"
 
 
 const featuredProducts = [

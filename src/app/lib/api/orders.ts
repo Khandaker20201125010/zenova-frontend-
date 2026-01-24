@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/orders.ts
 import { apiClient } from './axios-client'
 import { Order, ApiResponse } from '../types'

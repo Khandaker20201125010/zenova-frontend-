@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/blog.ts
 import { BlogPost } from '../types'
 import { apiClient } from './axios-client'

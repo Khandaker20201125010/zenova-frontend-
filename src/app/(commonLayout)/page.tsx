@@ -1,5 +1,6 @@
 
 import { Metadata } from "next";
+import HomePage from "../components/home/HomePage";
 
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="min-h-screen ">
-    
+      <HomePage></HomePage>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 import { z } from "zod"
 import { VALIDATION_MESSAGES } from "./constants"
 
-
 /**
  * Common validation schemas using Zod
  */
@@ -216,7 +215,7 @@ export const validationSchemas = {
     supportEmail: emailSchema,
     phone: phoneSchema.optional(),
     address: z.string().max(200, VALIDATION_MESSAGES.MAX_LENGTH(200)).optional(),
-    socialLinks: z.record(z.string()).optional(),
+    socialLinks: z.record(z.string(), z.string()).optional(),
     currency: z.string().min(1, VALIDATION_MESSAGES.REQUIRED),
     timezone: z.string().min(1, VALIDATION_MESSAGES.REQUIRED),
     maintenanceMode: z.boolean().optional(),
@@ -236,7 +235,7 @@ export function validateData<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors: Record<string, string> = {}
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         const path = err.path.join(".")
         errors[path] = err.message
       })

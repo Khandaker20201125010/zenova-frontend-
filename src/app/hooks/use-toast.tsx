@@ -1,64 +1,72 @@
-// hooks/use-toast.ts
+// hooks/use-toast.tsx
 "use client"
 
-import { toast as hotToast, ToastOptions } from "react-hot-toast"
+import * as React from "react"
 
-export type ToastType = "success" | "error" | "loading" | "blank"
+type ToastVariant = "default" | "destructive" | "success" | "warning" | "error"
 
-export interface ToastProps {
-  title?: string
+interface ToastProps {
+  title: string
   description?: string
-  type?: ToastType
-  duration?: number
-  position?: ToastOptions["position"]
+  variant?: ToastVariant
+  icon?: React.ReactNode
+}
+
+const ToastContext = React.createContext<{
+  toast: (props: ToastProps) => void
+}>({
+  toast: () => {},
+})
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = React.useState<ToastProps[]>([])
+
+  const toast = React.useCallback((props: ToastProps) => {
+    setToasts((prev) => [...prev, props])
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      setToasts((prev) => prev.slice(1))
+    }, 5000)
+  }, [])
+
+  return (
+    <ToastContext.Provider value={{ toast }}>
+      {children}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        {toasts.map((toast, index) => (
+          <div
+            key={index}
+            className={`p-4 rounded-lg shadow-lg border ${
+              toast.variant === "error" || toast.variant === "destructive"
+                ? "bg-destructive text-destructive-foreground border-destructive"
+                : toast.variant === "success"
+                ? "bg-green-500 text-white border-green-600"
+                : toast.variant === "warning"
+                ? "bg-yellow-500 text-white border-yellow-600"
+                : "bg-background text-foreground border"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {toast.icon && <div className="mt-0.5">{toast.icon}</div>}
+              <div>
+                <p className="font-semibold">{toast.title}</p>
+                {toast.description && (
+                  <p className="text-sm opacity-90 mt-1">{toast.description}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
 }
 
 export function useToast() {
-  const toast = ({
-    title,
-    description,
-    type = "blank",
-    duration = 4000,
-    position = "top-right",
-  }: ToastProps) => {
-    const message = description ? (
-      <div>
-        {title && <div className="font-semibold">{title}</div>}
-        <div className="text-sm opacity-90">{description}</div>
-      </div>
-    ) : (
-      title
-    )
-
-    const options: ToastOptions = {
-      duration,
-      position,
-      className: "!bg-background !text-foreground !border !border-border",
-    }
-
-    switch (type) {
-      case "success":
-        return hotToast.success(message, options)
-      case "error":
-        return hotToast.error(message, options)
-      case "loading":
-        return hotToast.loading(message, options)
-      default:
-        return hotToast(message, options)
-    }
+  const context = React.useContext(ToastContext)
+  if (!context) {
+    throw new Error("useToast must be used within ToastProvider")
   }
-
-  toast.success = (message: string, options?: ToastOptions) =>
-    hotToast.success(message, options)
-  toast.error = (message: string, options?: ToastOptions) =>
-    hotToast.error(message, options)
-  toast.loading = (message: string, options?: ToastOptions) =>
-    hotToast.loading(message, options)
-  toast.custom = (message: React.ReactNode, options?: ToastOptions) =>
-    hotToast.custom(message, options)
-  toast.dismiss = (toastId?: string) => hotToast.dismiss(toastId)
-  toast.remove = (toastId?: string) => hotToast.remove(toastId)
-  toast.promise = hotToast.promise
-
-  return toast
+  return context
 }

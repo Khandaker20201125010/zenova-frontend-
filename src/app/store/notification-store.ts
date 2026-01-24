@@ -1,19 +1,17 @@
 // store/notification-store.ts
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { Notification } from "../lib/types"
-
-
+import { Notification as TNotification } from "../lib/types"
 
 interface NotificationStore {
   // State
-  notifications: Notification[]
+  notifications: TNotification[]
   unreadCount: number
   soundEnabled: boolean
   pushEnabled: boolean
   
   // Actions
-  addNotification: (notification: Omit<Notification, "id" | "createdAt" | "updatedAt">) => void
+  addNotification: (notification: Omit<TNotification, "id" | "createdAt" | "updatedAt">) => void
   markAsRead: (id: string) => void
   markAllAsRead: () => void
   removeNotification: (id: string) => void
@@ -22,9 +20,9 @@ interface NotificationStore {
   togglePush: () => void
   
   // Computed
-  getUnreadNotifications: () => Notification[]
-  getReadNotifications: () => Notification[]
-  getRecentNotifications: (limit?: number) => Notification[]
+  getUnreadNotifications: () => TNotification[]
+  getReadNotifications: () => TNotification[]
+  getRecentNotifications: (limit?: number) => TNotification[]
 }
 
 export const useNotificationStore = create<NotificationStore>()(
@@ -38,7 +36,7 @@ export const useNotificationStore = create<NotificationStore>()(
       
       // Actions
       addNotification: (notification) => {
-        const newNotification: Notification = {
+        const newNotification: TNotification = {
           id: Math.random().toString(36).substr(2, 9),
           ...notification,
           read: false,
@@ -58,7 +56,7 @@ export const useNotificationStore = create<NotificationStore>()(
         }
         
         // Show browser notification if enabled and granted
-        if (get().pushEnabled && "Notification" in window && Notification.permission === "granted") {
+        if (get().pushEnabled && "Notification" in window && window.Notification.permission === "granted") {
           new window.Notification(notification.title, {
             body: notification.message,
             icon: "/favicon.ico",

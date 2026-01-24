@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/categories.ts
 import { apiClient } from './axios-client'
 

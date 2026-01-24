@@ -1,12 +1,12 @@
 // app/layout.tsx
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import "./globals.css";
+import "./globals.css"
 import { Toaster } from "react-hot-toast"
-import { ThemeProvider } from "./lib/providers/theme-provider";
-import { QueryProvider } from "./lib/providers/query-provider";
-import { AuthProvider } from "./lib/providers/auth-provider";
-
+import { ThemeProvider } from "./lib/providers/theme-provider"
+import { QueryProvider } from "./lib/providers/query-provider"
+import { AuthProvider } from "./lib/providers/auth-provider"
+import { ConfettiProvider } from "./components/shared/confetti-provider"
 
 
 const inter = Inter({ subsets: ["latin"] })
@@ -41,36 +41,36 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AuthProvider>
-              <div className="min-h-screen flex flex-col">
-          
-                <main className="flex-1">
-                  {children}
-                </main>
-               
-                <Toaster 
-                  position="top-right"
-                  toastOptions={{
-                    duration: 4000,
-                    style: {
-                      background: 'hsl(var(--background))',
-                      color: 'hsl(var(--foreground))',
-                      border: '1px solid hsl(var(--border))',
-                    },
-                    success: {
-                      iconTheme: {
-                        primary: 'hsl(var(--success))',
-                        secondary: 'hsl(var(--success-foreground))',
+              <ConfettiProvider>
+                <div className="min-h-screen flex flex-col">
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Toaster 
+                    position="top-right"
+                    toastOptions={{
+                      duration: 4000,
+                      style: {
+                        background: 'hsl(var(--background))',
+                        color: 'hsl(var(--foreground))',
+                        border: '1px solid hsl(var(--border))',
                       },
-                    },
-                    error: {
-                      iconTheme: {
-                        primary: 'hsl(var(--error))',
-                        secondary: 'hsl(var(--error-foreground))',
+                      success: {
+                        iconTheme: {
+                          primary: 'hsl(var(--success))',
+                          secondary: 'hsl(var(--success-foreground))',
+                        },
                       },
-                    },
-                  }}
-                />
-              </div>
+                      error: {
+                        iconTheme: {
+                          primary: 'hsl(var(--error))',
+                          secondary: 'hsl(var(--error-foreground))',
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              </ConfettiProvider>
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>

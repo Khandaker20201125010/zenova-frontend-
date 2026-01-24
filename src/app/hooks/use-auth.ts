@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/use-auth.ts
 "use client"
 
 import { useSession, signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useCallback } from "react"
-import { authApi } from "@/lib/api/auth"
 import { useToast } from "./use-toast"
+import { authApi } from "../lib/api/auth"
 
 export function useAuth() {
   const { data: session, status, update } = useSession()
@@ -39,7 +40,7 @@ export function useAuth() {
         toast({
           title: "Login failed",
           description: error.message || "Invalid credentials",
-          variant: "destructive",
+          variant: "error",
         })
         return { success: false, error: error.message }
       }
@@ -69,7 +70,7 @@ export function useAuth() {
         toast({
           title: "Registration failed",
           description: error.message || "An error occurred",
-          variant: "destructive",
+          variant: "error",
         })
         return { success: false, error: error.message }
       }
@@ -92,7 +93,7 @@ export function useAuth() {
       toast({
         title: "Logout failed",
         description: error.message || "An error occurred",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }, [router, toast])
@@ -107,21 +108,21 @@ export function useAuth() {
 
   const hasRole = useCallback(
     (role: string) => {
-      return user?.role === role
+      return (user as any)?.role === role
     },
     [user]
   )
 
   const hasAnyRole = useCallback(
     (roles: string[]) => {
-      return roles.includes(user?.role || "")
+      return roles.includes((user as any)?.role || "")
     },
     [user]
   )
 
-  const isAdmin = user?.role === "ADMIN"
-  const isManager = user?.role === "MANAGER"
-  const isUser = user?.role === "USER"
+  const isAdmin = (user as any)?.role === "ADMIN"
+  const isManager = (user as any)?.role === "MANAGER"
+  const isUser = (user as any)?.role === "USER"
 
   return {
     // State
@@ -143,6 +144,6 @@ export function useAuth() {
     
     // Helpers
     getToken: () => session?.accessToken,
-    getUserId: () => user?.id,
+    getUserId: () => (user as any)?.id,
   }
 }

@@ -1,27 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/types/index.ts
-// Base types
-
-export interface ApiResponse<T = any> {
-  success: boolean
-  message: string
-  data: T
-  meta?: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-    hasNext: boolean
-    hasPrev: boolean
-  }
-  error?: string
-  errors?: Array<{
-    field: string
-    message: string
-  }>
-}
-
-// User types
 export interface User {
   id: string
   email: string
@@ -31,46 +9,61 @@ export interface User {
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   emailVerified: boolean
   phone?: string
-  bio?: string
-  website?: string
-  location?: string
+  address?: Address
+  preferences?: UserPreferences
+  lastLogin?: string
   createdAt: string
   updatedAt: string
-  lastLoginAt?: string
 }
 
-export interface UserProfile extends User {
-  ordersCount: number
-  reviewsCount: number
-  favoritesCount: number
-  totalSpent: number
+export interface UserPreferences {
+  theme: "light" | "dark" | "system"
+  language: string
+  notifications: {
+    email: boolean
+    push: boolean
+    marketing: boolean
+  }
 }
 
-// Product types
 export interface Product {
   id: string
   name: string
   slug: string
   description: string
+  shortDescription?: string
   price: number
   compareAtPrice?: number
+  costPrice?: number
+  sku: string
+  barcode?: string
+  weight?: number
+  dimensions?: {
+    length: number
+    width: number
+    height: number
+  }
   images: string[]
   category: string
   tags: string[]
   inventory: number
-  sku?: string
+  lowStockThreshold: number
+  type: "PHYSICAL" | "DIGITAL" | "SERVICE"
+  status: "DRAFT" | "ACTIVE" | "ARCHIVED"
   rating: number
   reviewCount: number
   isFeatured: boolean
   isNew: boolean
-  specifications?: Record<string, any>
+  specifications: Record<string, any>
+  variants?: ProductVariant[]
+  seo?: SEO
+  features?: string[]
   createdAt: string
   updatedAt: string
 }
 
 export interface ProductVariant {
   id: string
-  productId: string
   name: string
   price: number
   sku: string
@@ -78,7 +71,6 @@ export interface ProductVariant {
   attributes: Record<string, string>
 }
 
-// Category types
 export interface Category {
   id: string
   name: string
@@ -89,9 +81,11 @@ export interface Category {
   order: number
   productCount: number
   children?: Category[]
+  seo?: SEO
+  createdAt: string
+  updatedAt: string
 }
 
-// Order types
 export interface Order {
   id: string
   orderNumber: string
@@ -101,58 +95,69 @@ export interface Order {
   subtotal: number
   tax: number
   shipping: number
-  discount: number
+  discount?: number
+  currency: string
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED"
-  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED"
   paymentMethod: string
   shippingAddress: Address
   billingAddress?: Address
   items: OrderItem[]
   notes?: string
+  trackingNumber?: string
+  estimatedDelivery?: string
+  deliveredAt?: string
+  cancelledAt?: string
+  refundedAt?: string
   createdAt: string
   updatedAt: string
-  estimatedDelivery?: string
-  trackingNumber?: string
 }
 
 export interface OrderItem {
   id: string
   orderId: string
   productId: string
-  productName: string
-  productImage?: string
-  variant?: string
+  product?: Product
+  variantId?: string
+  name: string
+  sku: string
   quantity: number
   price: number
   total: number
+  tax: number
+  discount?: number
 }
 
 export interface Address {
+  id?: string
+  firstName: string
+  lastName: string
+  company?: string
   street: string
+  apartment?: string
   city: string
   state: string
   country: string
   zipCode: string
   phone: string
+  isDefault?: boolean
 }
 
-// Payment types
 export interface Payment {
   id: string
   orderId: string
+  userId: string
   amount: number
   currency: string
-  method: string
   status: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED"
+  method: string
   transactionId?: string
-  paymentIntentId?: string
-  refundId?: string
-  metadata?: Record<string, any>
+  gatewayResponse?: any
+  refundedAmount?: number
   createdAt: string
   updatedAt: string
 }
 
-// Review types
 export interface Review {
   id: string
   productId: string
@@ -160,59 +165,71 @@ export interface Review {
   userId: string
   user?: User
   rating: number
+  title?: string
   comment: string
   verifiedPurchase: boolean
   helpful: number
+  reported: boolean
+  status: "PENDING" | "APPROVED" | "REJECTED"
   images?: string[]
+  replies?: ReviewReply[]
   createdAt: string
   updatedAt: string
 }
 
-// Blog types
+export interface ReviewReply {
+  id: string
+  reviewId: string
+  userId: string
+  user?: User
+  comment: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface BlogPost {
   id: string
   title: string
   slug: string
   content: string
-  excerpt?: string
-  coverImage?: string
+  excerpt: string
+  coverImage: string
   authorId: string
   author?: User
   category: string
   tags: string[]
   published: boolean
+  featured: boolean
   views: number
-  readTime: number
-  seoTitle?: string
-  seoDescription?: string
+  readingTime: number
+  seo?: SEO
   createdAt: string
   updatedAt: string
   publishedAt?: string
 }
 
-// Notification types
+export interface Comment {
+  id: string
+  postId: string
+  userId: string
+  user?: User
+  parentId?: string
+  content: string
+  likes: number
+  status: "PENDING" | "APPROVED" | "SPAM"
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Notification {
   id: string
   userId: string
   type: "INFO" | "SUCCESS" | "WARNING" | "ERROR"
   title: string
   message: string
+  data?: any
   read: boolean
-  metadata?: Record<string, any>
-  createdAt: string
-  updatedAt: string
-}
-
-// Contact types
-export interface ContactMessage {
-  id: string
-  name: string
-  email: string
-  subject: string
-  message: string
-  status: "PENDING" | "READ" | "RESPONDED" | "CLOSED"
-  response?: string
-  respondedAt?: string
+  actionUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -228,91 +245,74 @@ export interface FAQ {
   updatedAt: string
 }
 
-// Settings types
-export interface Settings {
+export interface ContactMessage {
   id: string
-  key: string
-  value: any
-  category: string
-  type: "STRING" | "NUMBER" | "BOOLEAN" | "JSON" | "ARRAY"
-  description?: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  status: "PENDING" | "READ" | "RESPONDED" | "CLOSED"
+  response?: string
+  respondedAt?: string
   createdAt: string
   updatedAt: string
 }
 
-export interface SiteSettings {
-  site: {
-    name: string
-    description: string
-    logo?: string
-    favicon?: string
-    theme: "light" | "dark" | "auto"
-    language: string
-    timezone: string
-    currency: string
-  }
-  contact: {
-    email: string
-    phone?: string
-    address?: string
-    socialLinks: Record<string, string>
-  }
-  email: {
-    from: string
-    smtp: {
-      host: string
-      port: number
-      secure: boolean
-      user: string
-      password: string
-    }
-    templates: Record<string, string>
-  }
-  payment: {
-    stripe: {
-      publicKey: string
-      secretKey: string
-      webhookSecret: string
-    }
-    currency: string
-    methods: string[]
-  }
-  storage: {
-    cloudinary: {
-      cloudName: string
-      apiKey: string
-      apiSecret: string
-    }
-    maxFileSize: number
-    allowedTypes: string[]
-  }
-  security: {
-    passwordMinLength: number
-    requireEmailVerification: boolean
-    enable2FA: boolean
-    sessionTimeout: number
-  }
-  analytics: {
-    googleAnalyticsId?: string
-    facebookPixelId?: string
-  }
+export interface Setting {
+  id: string
+  key: string
+  value: any
+  type: "STRING" | "NUMBER" | "BOOLEAN" | "JSON" | "ARRAY"
+  group: string
+  label: string
+  description?: string
+  options?: any[]
+  createdAt: string
+  updatedAt: string
 }
 
-// Activity types
+export interface Subscription {
+  id: string
+  userId: string
+  user?: User
+  planId: string
+  plan?: Plan
+  status: "ACTIVE" | "CANCELLED" | "EXPIRED" | "PAST_DUE"
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  cancelAtPeriodEnd: boolean
+  cancelledAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Plan {
+  id: string
+  name: string
+  description?: string
+  price: number
+  currency: string
+  interval: "MONTHLY" | "YEARLY" | "LIFETIME"
+  features: string[]
+  isActive: boolean
+  isPopular: boolean
+  trialDays?: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Activity {
   id: string
   userId: string
   user?: User
-  action: string
-  entityType: string
-  entityId?: string
-  details?: Record<string, any>
+  type: string
+  description: string
   ipAddress?: string
   userAgent?: string
+  metadata?: any
   createdAt: string
 }
 
-// Favorite types
 export interface Favorite {
   id: string
   userId: string
@@ -321,22 +321,29 @@ export interface Favorite {
   createdAt: string
 }
 
-// Subscription types
-export interface Subscription {
+export interface ApiKey {
   id: string
+  name: string
+  key: string
+  prefix: string
   userId: string
-  plan: string
-  status: "ACTIVE" | "CANCELLED" | "EXPIRED"
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  cancelAtPeriodEnd: boolean
-  stripeSubscriptionId?: string
-  stripeCustomerId?: string
+  user?: User
+  permissions: string[]
+  lastUsed?: string
+  expiresAt?: string
+  isActive: boolean
   createdAt: string
   updatedAt: string
 }
 
-// Dashboard types
+export interface SEO {
+  title?: string
+  description?: string
+  keywords?: string[]
+  image?: string
+  canonical?: string
+}
+
 export interface DashboardStats {
   totalUsers: number
   totalOrders: number
@@ -347,155 +354,64 @@ export interface DashboardStats {
   monthlyGrowth: number
   conversionRate: number
   averageOrderValue: number
+  refundRate: number
+  topProducts: Array<{
+    id: string
+    name: string
+    sales: number
+    revenue: number
+  }>
+  recentOrders: Order[]
+  recentUsers: User[]
 }
 
-export interface RevenueData {
-  date: string
-  revenue: number
-  orders: number
-  averageOrderValue: number
-}
-
-export interface UserGrowthData {
-  date: string
-  totalUsers: number
-  newUsers: number
-  activeUsers: number
-}
-
-export interface SalesData {
-  category: string
-  sales: number
-  percentage: number
-}
-
-export interface TopProduct {
-  id: string
-  name: string
-  sales: number
-  revenue: number
-  stock: number
-}
-
-// Form types
-export interface FormState {
-  isLoading: boolean
-  isSuccess: boolean
-  isError: boolean
+export interface ApiResponse<T = any> {
+  success: boolean
+  message: string
+  data: T
+  meta?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
   error?: string
-  message?: string
-}
-
-// Pagination types
-export interface PaginationParams {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
-
-// Filter types
-export interface FilterParams {
-  search?: string
-  category?: string
-  tags?: string[]
-  minPrice?: number
-  maxPrice?: number
-  status?: string
-  role?: string
-  sortBy?: string
-  sortOrder?: "asc" | "desc"
-  dateFrom?: string
-  dateTo?: string
-}
-
-// Table types
-export interface TableColumn<T> {
-  key: keyof T | string
-  header: string
-  cell?: (item: T) => React.ReactNode
-  sortable?: boolean
-  filterable?: boolean
-  width?: string
-  align?: "left" | "center" | "right"
-}
-
-// Chart types
-export interface ChartData {
-  labels: string[]
-  datasets: Array<{
-    label: string
-    data: number[]
-    backgroundColor: string | string[]
-    borderColor: string | string[]
-    borderWidth: number
+  errors?: Array<{
+    field: string
+    message: string
   }>
 }
 
-// NextAuth types
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      email: string
-      name: string
-      avatar?: string
-      role: string
-    }
-    accessToken: string
-  }
-  
-  interface User {
-    id: string
-    email: string
-    name: string
-    role: string
-    accessToken: string
-  }
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string
-    email: string
-    name: string
-    role: string
-    accessToken: string
-  }
+export interface QueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
+  [key: string]: any
 }
 
-// Export all types
-// export type {
-//   ApiResponse,
-//   User,
-//   UserProfile,
-//   Product,
-//   ProductVariant,
-//   Category,
-//   Order,
-//   OrderItem,
-//   Address,
-//   Payment,
-//   Review,
-//   BlogPost,
-//   Notification,
-//   ContactMessage,
-//   FAQ,
-//   Settings,
-//   SiteSettings,
-//   Activity,
-//   Favorite,
-//   Subscription,
-//   DashboardStats,
-//   RevenueData,
-//   UserGrowthData,
-//   SalesData,
-//   TopProduct,
-//   FormState,
-//   PaginationParams,
-//   FilterParams,
-//   TableColumn,
-//   ChartData,
-// }
+export interface ReviewResponse {
+  reviews: Review[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  averageRating: number
+  totalReviews: number
+  distribution?: {
+    1: number
+    2: number
+    3: number
+    4: number
+    5: number
+  }
+}

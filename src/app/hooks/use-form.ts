@@ -7,24 +7,24 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm as useReactHookForm, UseFormProps } from "react-hook-form"
 import { z } from "zod"
 
-export function useForm<T extends z.ZodSchema>(
+export function useForm<T extends z.ZodTypeAny>(
   schema: T,
-  defaultValues?: z.infer<T>,
-  options?: UseFormProps<z.infer<T>>
+  defaultValues?: Partial<z.infer<T> & Record<string, any>>,
+  options?: UseFormProps<z.infer<T> & Record<string, any>>
 ) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  const form = useReactHookForm<z.infer<T>>({
-    resolver: zodResolver(schema),
-    defaultValues,
+  const form = useReactHookForm<z.infer<T> & Record<string, any>>({
+    resolver: zodResolver(schema as any),
+    defaultValues: defaultValues as any,
     mode: "onChange",
     ...options,
   })
 
   const handleSubmit = useCallback(
-    async (onSubmit: (data: z.infer<T>) => Promise<any>) => {
+    (onSubmit: (data: z.infer<T>) => Promise<any>) => {
       return form.handleSubmit(async (data) => {
         setIsSubmitting(true)
         setSubmitError(null)
@@ -51,13 +51,13 @@ export function useForm<T extends z.ZodSchema>(
     setIsSubmitting(false)
   }, [form])
 
-  const setFormError = useCallback((field: keyof z.infer<T>, message: string) => {
-    form.setError(field as string, { type: "manual", message })
+  const setFormError = useCallback((field: string, message: string) => {
+    form.setError(field as any, { type: "manual", message })
   }, [form])
 
-  const clearFormError = useCallback((field?: keyof z.infer<T>) => {
+  const clearFormError = useCallback((field?: string) => {
     if (field) {
-      form.clearErrors(field as string)
+      form.clearErrors(field as any)
     } else {
       form.clearErrors()
     }

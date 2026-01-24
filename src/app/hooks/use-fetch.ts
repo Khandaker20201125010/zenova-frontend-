@@ -29,8 +29,7 @@ export function useFetch<T>() {
       setIsSuccess(false);
 
       try {
-        const response = await apiClient[method]<T>(url, payload);
-        const result = response.data;
+        const result = await apiClient[method]<T>(url, payload);
         setData(result);
         setIsSuccess(true);
         options?.onSuccess?.(result);

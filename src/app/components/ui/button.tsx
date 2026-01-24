@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/ui/button.tsx
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -53,6 +54,8 @@ export interface ButtonProps
   loading?: boolean
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  asChild?: boolean
+  href?: string
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -67,17 +70,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     leftIcon,
     rightIcon,
     children,
+    asChild = false,
+    href,
     ...props 
   }, ref) => {
     const isDisabled = disabled || loading
     
-    return (
-      <button
-        className={cn(buttonVariants({ variant, size, rounded, fullWidth, className }))}
-        ref={ref}
-        disabled={isDisabled}
-        {...props}
-      >
+    const buttonContent = (
+      <>
         {loading && (
           <Loader2 className={cn("mr-2 h-4 w-4 animate-spin", {
             "mr-0": !children,
@@ -90,6 +90,29 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {!loading && rightIcon && (
           <span className="ml-2">{rightIcon}</span>
         )}
+      </>
+    )
+
+    if (asChild && href) {
+      return (
+        <a
+          href={href}
+          className={cn(buttonVariants({ variant, size, rounded, fullWidth, className }))}
+          {...(props as any)}
+        >
+          {buttonContent}
+        </a>
+      )
+    }
+
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, rounded, fullWidth, className }))}
+        ref={ref}
+        disabled={isDisabled}
+        {...props}
+      >
+        {buttonContent}
       </button>
     )
   }

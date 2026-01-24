@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/axios-client.ts
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { getSession, signOut } from 'next-auth/react'
 import Swal from 'sweetalert2'
-import { ApiResponse } from '@/lib/types'
+import { ApiResponse } from '../types'
+
 
 // Create axios instance
 const api = axios.create({
@@ -17,7 +19,7 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-  async (config: AxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     // Get session
     const session = await getSession()
     
@@ -28,10 +30,11 @@ api.interceptors.request.use(
     }
     
     // Add request ID for tracing
+    config.headers = config.headers || {}
     config.headers['X-Request-ID'] = crypto.randomUUID()
     
     // Add timestamp
-    config.headers['X-Timestamp'] = Date.now()
+    config.headers['X-Timestamp'] = Date.now().toString()
     
     return config
   },
@@ -173,31 +176,31 @@ export const apiClient = {
   // GET request
   get: async <T>(url: string, params?: any): Promise<T> => {
     const response = await api.get<ApiResponse<T>>(url, { params })
-    return response.data.data
+    return response.data.data as T
   },
   
   // POST request
   post: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.post<ApiResponse<T>>(url, data)
-    return response.data.data
+    return response.data.data as T
   },
   
   // PUT request
   put: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.put<ApiResponse<T>>(url, data)
-    return response.data.data
+    return response.data.data as T
   },
   
   // PATCH request
   patch: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.patch<ApiResponse<T>>(url, data)
-    return response.data.data
+    return response.data.data as T
   },
   
   // DELETE request
   delete: async <T>(url: string): Promise<T> => {
     const response = await api.delete<ApiResponse<T>>(url)
-    return response.data.data
+    return response.data.data as T
   },
   
   // Upload file
@@ -210,7 +213,7 @@ export const apiClient = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data.data
+    return response.data.data as T
   },
   
   // Upload multiple files
@@ -225,7 +228,7 @@ export const apiClient = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data.data
+    return response.data.data as T
   },
 }
 

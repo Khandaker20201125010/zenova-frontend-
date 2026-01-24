@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/layout/navbar/index.tsx
 "use client"
 
@@ -23,21 +24,18 @@ import {
   CreditCard,
   HelpCircle
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { useCartStore } from "@/store/cart-store"
 import { useTheme } from "next-themes"
-import { DesktopNav } from "./desktop-nav"
+import { useCartStore } from "@/src/app/store/cart-store"
+import { Input } from "../../../ui/input"
 import { MobileNav } from "./mobile-nav"
-import { UserMenu } from "./user-menu"
+import { DesktopNav } from "./desktop-nav"
+
 
 export function Navbar() {
   const { data: session } = useSession()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const cartItems = useCartStore((state) => state.getItemCount())
+  const cartItems = useCartStore((state : any) => state.getItemCount())
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/notifications/notification-center.tsx
 "use client"
 
@@ -17,6 +18,7 @@ import {   DropdownMenu,
 import { Button } from "../ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "../ui/badge"
+import { useToast } from "../../hooks/use-toast"
 
 
 interface Notification {

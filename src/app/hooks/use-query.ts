@@ -5,16 +5,13 @@
 import { useQuery as useReactQuery, UseQueryOptions } from "@tanstack/react-query"
 import { apiClient } from "../lib/api/axios-client"
 
-
-
-
 export function useQuery<T>(
-  key: string | string[],
+  key: string[],
   queryFn: () => Promise<T>,
   options?: UseQueryOptions<T>
 ) {
   return useReactQuery<T>({
-    queryKey: Array.isArray(key) ? key : [key],
+    queryKey: key,
     queryFn,
     ...options,
   })
@@ -22,8 +19,9 @@ export function useQuery<T>(
 
 // Common queries
 export function useProductsQuery(filters?: any) {
+  const key = ["products", JSON.stringify(filters || {})]
   return useQuery(
-    ["products", filters],
+    key,
     () => apiClient.get("/products", filters)
   )
 }
@@ -43,8 +41,9 @@ export function useUserQuery() {
 }
 
 export function useOrdersQuery(page?: number, limit?: number) {
+  const key = ["orders", page?.toString() || "1", limit?.toString() || "10"]
   return useQuery(
-    ["orders", page, limit],
+    key,
     () => apiClient.get("/orders/user", { page, limit })
   )
 }

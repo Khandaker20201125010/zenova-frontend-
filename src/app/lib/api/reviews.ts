@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/reviews.ts
 import { Review } from '../types'
 import { apiClient } from './axios-client'
