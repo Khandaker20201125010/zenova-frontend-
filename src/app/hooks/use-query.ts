@@ -2,55 +2,58 @@
 // hooks/use-query.ts
 "use client"
 
-import { useQuery as useReactQuery, UseQueryOptions } from "@tanstack/react-query"
+import { useQuery as useReactQuery } from "@tanstack/react-query"
 import { apiClient } from "../lib/api/axios-client"
 
-export function useQuery<T>(
-  key: string[],
-  queryFn: () => Promise<T>,
-  options?: UseQueryOptions<T>
-) {
-  return useReactQuery<T>({
-    queryKey: key,
-    queryFn,
-    ...options,
+// Common queries with proper typing
+export function useProductsQuery(filters?: any) {
+  return useReactQuery({
+    queryKey: ["products", filters],
+    queryFn: async () => {
+      console.log("Fetching products with filters:", filters);
+      const response = await apiClient.get("/products", { params: filters });
+      console.log("Products API response:", response);
+      return response;
+    },
   })
 }
 
-// Common queries
-export function useProductsQuery(filters?: any) {
-  const key = ["products", JSON.stringify(filters || {})]
-  return useQuery(
-    key,
-    () => apiClient.get("/products", filters)
-  )
-}
-
 export function useProductQuery(slug: string) {
-  return useQuery(
-    ["product", slug],
-    () => apiClient.get(`/products/slug/${slug}`)
-  )
+  return useReactQuery({
+    queryKey: ["product", slug],
+    queryFn: async () => {
+      const response = await apiClient.get(`/products/slug/${slug}`);
+      return response;
+    },
+  })
 }
 
 export function useUserQuery() {
-  return useQuery(
-    ["user"],
-    () => apiClient.get("/auth/me")
-  )
+  return useReactQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const response = await apiClient.get("/auth/me");
+      return response;
+    },
+  })
 }
 
 export function useOrdersQuery(page?: number, limit?: number) {
-  const key = ["orders", page?.toString() || "1", limit?.toString() || "10"]
-  return useQuery(
-    key,
-    () => apiClient.get("/orders/user", { page, limit })
-  )
+  return useReactQuery({
+    queryKey: ["orders", page, limit],
+    queryFn: async () => {
+      const response = await apiClient.get("/orders/user", { params: { page, limit } });
+      return response;
+    },
+  })
 }
 
 export function useDashboardQuery() {
-  return useQuery(
-    ["dashboard"],
-    () => apiClient.get("/dashboard/user")
-  )
+  return useReactQuery({
+    queryKey: ["dashboard"],
+    queryFn: async () => {
+      const response = await apiClient.get("/dashboard/user");
+      return response;
+    },
+  })
 }

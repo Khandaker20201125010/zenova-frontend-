@@ -27,39 +27,39 @@ export interface UserPreferences {
 }
 
 export interface Product {
-  id: string
-  name: string
-  slug: string
-  description: string
-  shortDescription?: string
-  price: number
-  compareAtPrice?: number
-  costPrice?: number
-  sku: string
-  barcode?: string
-  weight?: number
-  dimensions?: {
-    length: number
-    width: number
-    height: number
-  }
-  images: string[]
-  category: string
-  tags: string[]
-  inventory: number
-  lowStockThreshold: number
-  type: "PHYSICAL" | "DIGITAL" | "SERVICE"
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED"
-  rating: number
-  reviewCount: number
-  isFeatured: boolean
-  isNew: boolean
-  specifications: Record<string, any>
-  variants?: ProductVariant[]
-  seo?: SEO
-  features?: string[]
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  slug: string  | undefined;
+  description: string;
+  shortDescription?: string;
+  price: number;
+  discountedPrice?: number;
+  compareAtPrice?: number;
+  images: string[];
+  categoryId: string;
+  category?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  tags: string[];
+  features?: string[];
+  specifications?: Record<string, any>;
+  rating: number;
+  reviewCount: number;
+  stock: number;  // This is what your backend uses (not inventory)
+  isFeatured: boolean;
+  isActive?: boolean;
+  isNew?: boolean; // For UI only
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    reviews: number;
+    favorites: number;
+  };
 }
 
 export interface ProductVariant {

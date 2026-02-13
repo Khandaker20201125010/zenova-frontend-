@@ -1,79 +1,26 @@
 // components/home/products-section.tsx
 "use client"
 
-import { useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Button } from "../ui/button"
 import { ArrowRight, Star } from "lucide-react"
 import { useProductsQuery } from "../../hooks/use-query"
 import { ProductCard } from "../products/product-card"
-
-
-const featuredProducts = [
-  {
-    id: "1",
-    name: "Premium Analytics Suite",
-    slug: "premium-analytics-suite",
-    description: "Advanced analytics platform with real-time insights and predictive modeling.",
-    price: 299,
-    images: ["/products/analytics.jpg"],
-    category: "Analytics",
-    tags: ["analytics", "premium", "business"],
-    rating: 4.8,
-    reviewCount: 124,
-    inStock: true,
-    isFeatured: true,
-    isNew: true,
-  },
-  {
-    id: "2",
-    name: "E-Commerce Pro",
-    slug: "e-commerce-pro",
-    description: "Complete e-commerce solution with inventory management and payment processing.",
-    price: 199,
-    images: ["/products/ecommerce.jpg"],
-    category: "E-Commerce",
-    tags: ["ecommerce", "store", "shopping"],
-    rating: 4.6,
-    reviewCount: 89,
-    inStock: true,
-    isFeatured: true,
-  },
-  {
-    id: "3",
-    name: "Team Collaboration",
-    slug: "team-collaboration",
-    description: "Collaboration tools for remote teams with video calls and file sharing.",
-    price: 149,
-    images: ["/products/collaboration.jpg"],
-    category: "Productivity",
-    tags: ["collaboration", "team", "remote"],
-    rating: 4.7,
-    reviewCount: 67,
-    inStock: true,
-    isFeatured: true,
-    isNew: true,
-  },
-  {
-    id: "4",
-    name: "Marketing Automation",
-    slug: "marketing-automation",
-    description: "Automate your marketing campaigns with AI-powered tools.",
-    price: 249,
-    images: ["/products/marketing.jpg"],
-    category: "Marketing",
-    tags: ["marketing", "automation", "ai"],
-    rating: 4.9,
-    reviewCount: 156,
-    inStock: true,
-    isFeatured: true,
-  },
-]
+import { Product } from "../../lib/types"
+import { useEffect } from "react"
 
 export default function ProductsSection() {
-  const { data: products, isLoading } = useProductsQuery({ limit: 8, isFeatured: true })
-  const [displayProducts] = useState(featuredProducts)
+  const { data: products, isLoading, error } = useProductsQuery({ limit: 8, isFeatured: true })
+  
+  // Log the response to see what's coming from the API
+  useEffect(() => {
+    console.log("Products received:", products);
+    console.log("Error:", error);
+  }, [products, error]);
+  
+  // Ensure products is an array
+  const productArray = Array.isArray(products) ? products : [];
 
   return (
     <section className="py-20 lg:py-32 bg-muted/30">
@@ -108,9 +55,13 @@ export default function ProductsSection() {
               <div key={i} className="h-[400px] bg-muted rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : (
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">
+            Failed to load products. Please try again later.
+          </div>
+        ) : productArray.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {displayProducts.map((product, index) => (
+            {productArray.map((product: Product, index: number) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -121,6 +72,10 @@ export default function ProductsSection() {
                 <ProductCard product={product} />
               </motion.div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            No products found.
           </div>
         )}
 

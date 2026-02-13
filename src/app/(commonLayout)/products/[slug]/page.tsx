@@ -34,14 +34,15 @@ import { reviewsApi } from "@/src/app/lib/api/reviews"
 import { ReviewCard } from "@/src/app/components/products/review-card"
 import { ProductCard } from "@/src/app/components/products/product-card"
 import { ReviewForm } from "@/src/app/components/products/review-form"
+import { Product } from "@/src/app/lib/types"
 
-
+// Main component - make sure it's exported as default
 export default function ProductDetailsPage() {
   const params = useParams()
   const { toast } = useToast()
   const addToCart = useCartStore((state) => state.addItem)
-  const [product, setProduct] = useState<any>(null)
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([])
+  const [product, setProduct] = useState<Product | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
@@ -49,22 +50,42 @@ export default function ProductDetailsPage() {
   const [activeTab, setActiveTab] = useState("description")
 
   useEffect(() => {
-    fetchProductDetails()
-  }, [params.slug])
+    if (params?.slug) {
+      fetchProductDetails()
+    }
+  }, [params?.slug])
 
   const fetchProductDetails = async () => {
     try {
       setLoading(true)
-      const productData = await productsApi.getProductBySlug(params.slug as string)
+      
+      // Safely extract slug
+      const slugParam = params?.slug
+      if (!slugParam) {
+        notFound()
+        return
+      }
+      
+      const slug = Array.isArray(slugParam) ? slugParam[0] : slugParam
+      if (!slug) {
+        notFound()
+        return
+      }
+      
+      const productData = await productsApi.getProductBySlug(slug)
       setProduct(productData)
 
       // Fetch related products
-      const related = await productsApi.getRelatedProducts(productData.id)
-      setRelatedProducts(related || [])
+      if (productData?.id) {
+        const related = await productsApi.getRelatedProducts(productData.id)
+        setRelatedProducts(related || [])
+      }
 
       // Fetch reviews
-      const reviewsData = await reviewsApi.getProductReviews(productData.id)
-      setReviews(reviewsData.reviews || [])
+      if (productData?.id) {
+        const reviewsData = await reviewsApi.getProductReviews(productData.id)
+        setReviews(reviewsData?.reviews || [])
+      }
     } catch (error) {
       console.error("Failed to fetch product:", error)
       notFound()
@@ -80,9 +101,9 @@ export default function ProductDetailsPage() {
       id: product.id,
       productId: product.id,
       name: product.name,
-      price: product.price,
+      price: product.discountedPrice || product.price,
       quantity,
-      image: product.images[0],
+      image: product.images?.[0] || "/placeholder.jpg",
     })
 
     toast({
@@ -107,6 +128,14 @@ export default function ProductDetailsPage() {
     return notFound()
   }
 
+  // Get category name safely
+  const categoryName = typeof product.category === 'string' 
+    ? product.category 
+    : product.category?.name || 'Uncategorized';
+
+  // Get current price (with discount if available)
+  const currentPrice = product.discountedPrice || product.price;
+
   return (
     <div className="container py-8">
       {/* Breadcrumb */}
@@ -116,8 +145,8 @@ export default function ProductDetailsPage() {
           <span className="mx-2">/</span>
           <Link href="/products" className="hover:text-foreground">Products</Link>
           <span className="mx-2">/</span>
-          <Link href={`/products?category=${product.category}`} className="hover:text-foreground">
-            {product.category}
+          <Link href={`/products?category=${product.categoryId || ''}`} className="hover:text-foreground">
+            {categoryName}
           </Link>
           <span className="mx-2">/</span>
           <span className="text-foreground font-medium">{product.name}</span>
@@ -131,11 +160,12 @@ export default function ProductDetailsPage() {
           <Card className="overflow-hidden mb-4">
             <div className="relative aspect-square">
               <Image
-                src={product.images[selectedImage] || "/placeholder.jpg"}
+                src={product.images?.[selectedImage] || "/placeholder.jpg"}
                 alt={product.name}
                 fill
                 className="object-cover"
                 priority
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
               {product.isNew && (
                 <Badge className="absolute top-4 left-4 bg-green-500">NEW</Badge>
@@ -147,24 +177,27 @@ export default function ProductDetailsPage() {
           </Card>
 
           {/* Thumbnail Images */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {product.images.map((image: string, index: number) => (
-              <button
-                key={index}
-                onClick={() => setSelectedImage(index)}
-                className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
-                  selectedImage === index ? "border-primary" : "border-transparent"
-                }`}
-              >
-                <Image
-                  src={image || "/placeholder.jpg"}
-                  alt={`${product.name} - ${index + 1}`}
-                  fill
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
+          {product.images && product.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {product.images.map((image: string, index: number) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedImage(index)}
+                  className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
+                    selectedImage === index ? "border-primary" : "border-transparent"
+                  }`}
+                >
+                  <Image
+                    src={image || "/placeholder.jpg"}
+                    alt={`${product.name} - ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Column - Product Info */}
@@ -179,7 +212,7 @@ export default function ProductDetailsPage() {
                   <Star
                     key={i}
                     className={`h-5 w-5 ${
-                      i < Math.floor(product.rating)
+                      i < Math.floor(product.rating || 0)
                         ? "fill-yellow-400 text-yellow-400"
                         : "fill-gray-200 text-gray-200"
                     }`}
@@ -187,24 +220,24 @@ export default function ProductDetailsPage() {
                 ))}
               </div>
               <span className="text-muted-foreground">
-                ({product.reviewCount} reviews)
+                ({product.reviewCount || 0} reviews)
               </span>
               <Badge variant="outline" className="ml-4">
-                {product.category}
+                {categoryName}
               </Badge>
             </div>
 
             {/* Price */}
             <div className="mb-6">
               <div className="flex items-center gap-3">
-                <span className="text-4xl font-bold">${product.price}</span>
-                {product.compareAtPrice && (
+                <span className="text-4xl font-bold">${currentPrice}</span>
+                {product.discountedPrice && product.discountedPrice < product.price && (
                   <>
                     <span className="text-2xl text-muted-foreground line-through">
-                      ${product.compareAtPrice}
+                      ${product.price}
                     </span>
                     <Badge className="bg-green-500">
-                      Save {Math.round((1 - product.price / product.compareAtPrice) * 100)}%
+                      Save {Math.round((1 - product.discountedPrice / product.price) * 100)}%
                     </Badge>
                   </>
                 )}
@@ -216,10 +249,10 @@ export default function ProductDetailsPage() {
 
             {/* Inventory Status */}
             <div className="mb-6">
-              {product.inventory > 0 ? (
+              {(product.stock || 0) > 0 ? (
                 <div className="flex items-center gap-2 text-green-600">
                   <Check className="h-5 w-5" />
-                  <span>In Stock ({product.inventory} available)</span>
+                  <span>In Stock ({product.stock} available)</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-red-600">
@@ -258,10 +291,10 @@ export default function ProductDetailsPage() {
                   size="lg"
                   className="flex-1 gap-2"
                   onClick={handleAddToCart}
-                  disabled={product.inventory === 0}
+                  disabled={!product.stock || product.stock === 0}
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  {product.inventory > 0 ? "Add to Cart" : "Out of Stock"}
+                  {product.stock && product.stock > 0 ? "Add to Cart" : "Out of Stock"}
                 </Button>
 
                 <Button variant="outline" size="icon">
@@ -278,7 +311,7 @@ export default function ProductDetailsPage() {
                 size="lg"
                 className="w-full gap-2"
                 variant="secondary"
-                disabled={product.inventory === 0}
+                disabled={!product.stock || product.stock === 0}
               >
                 Buy Now
               </Button>
@@ -348,7 +381,7 @@ export default function ProductDetailsPage() {
                   <h3>Product Description</h3>
                   <p>{product.description}</p>
                   
-                  {product.features && (
+                  {product.features && product.features.length > 0 && (
                     <>
                       <h4>Key Features</h4>
                       <ul>
@@ -367,14 +400,18 @@ export default function ProductDetailsPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  {Object.entries(product.specifications || {}).map(([key, value]: [string, any]) => (
-                    <div key={key} className="flex justify-between py-3 border-b">
-                      <span className="font-medium text-muted-foreground">
-                        {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                      </span>
-                      <span className="font-medium">{value}</span>
-                    </div>
-                  ))}
+                  {product.specifications && Object.keys(product.specifications).length > 0 ? (
+                    Object.entries(product.specifications).map(([key, value]: [string, any]) => (
+                      <div key={key} className="flex justify-between py-3 border-b">
+                        <span className="font-medium text-muted-foreground">
+                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        </span>
+                        <span className="font-medium">{String(value)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No specifications available.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
