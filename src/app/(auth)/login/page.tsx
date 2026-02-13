@@ -26,7 +26,7 @@ import { Separator } from "../../components/ui/separator"
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
   const { toast } = useToast()
 
   const [email, setEmail] = useState("")

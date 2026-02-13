@@ -115,7 +115,7 @@ export default function RegisterPage() {
           title: "Registration Successful",
           description: "Welcome! Your account has been created.",
         })
-        router.push("/dashboard")
+        router.push("/")
       }
     } catch (error: any) {
       toast({
