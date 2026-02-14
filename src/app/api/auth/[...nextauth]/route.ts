@@ -1,8 +1,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import type { NextAuthOptions } from "next-auth";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     // Google Provider
     GoogleProvider({
@@ -12,9 +13,9 @@ const handler = NextAuth({
         params: {
           prompt: "consent",
           access_type: "offline",
-          response_type: "code"
-        }
-      }
+          response_type: "code",
+        },
+      },
     }),
 
     // Credentials Provider (Email/Password)
@@ -24,7 +25,6 @@ const handler = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        isLogin: { label: "Is Login", type: "boolean" } // To differentiate login vs register
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -33,16 +33,19 @@ const handler = NextAuth({
 
         try {
           // Call your backend login API
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+              }),
             },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
+          );
 
           const data = await res.json();
 
@@ -65,8 +68,8 @@ const handler = NextAuth({
           console.error("Authorize error:", error);
           throw error;
         }
-      }
-    })
+      },
+    }),
   ],
 
   // Callbacks to handle JWT and Session
@@ -87,18 +90,21 @@ const handler = NextAuth({
       if (account?.provider === "google") {
         try {
           // Call your backend social login API
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/social-login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/social-login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: token.email,
+                name: token.name,
+                googleId: account.providerAccountId,
+                avatar: token.picture,
+              }),
             },
-            body: JSON.stringify({
-              email: token.email,
-              name: token.name,
-              googleId: account.providerAccountId,
-              avatar: token.picture,
-            }),
-          });
+          );
 
           const data = await res.json();
 
@@ -121,7 +127,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-        session.user.avatar = token.avatar as string;
+        session.user.avatar = token.avatar as string | null | undefined;
         session.user.accessToken = token.accessToken as string;
         session.user.refreshToken = token.refreshToken as string;
       }
@@ -134,20 +140,21 @@ const handler = NextAuth({
       // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
-    }
+    },
   },
 
   // Custom pages
   pages: {
-    signIn: '/login',
-    signUp: '/register',
-    error: '/auth/error',
-    verifyRequest: '/auth/verify-request',
+    signIn: "/login",
+    error: "/auth/error",
+    verifyRequest: "/auth/verify-request",
+    // Note: 'signUp' is not a valid option in NextAuth pages
+    // Use the signIn page with a register link instead
   },
 
   // Session configuration
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
@@ -157,9 +164,10 @@ const handler = NextAuth({
   },
 
   // Enable debug messages in development
-  debug: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === "development",
 
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
