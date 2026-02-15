@@ -1,25 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/products/[slug]/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
 import { useParams, notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
 import {
   Star,
   ShoppingCart,
   Heart,
   Share2,
-  Truck,
-  Shield,
+  Zap,
+  ShieldCheck,
+  Cloud,
+  LifeBuoy,
   ArrowLeft,
   Check,
   Minus,
   Plus,
-  Package,
-  RefreshCw,
 } from "lucide-react"
 
 import { Card, CardContent } from "@/src/app/components/ui/card"
@@ -36,63 +34,62 @@ import { ProductCard } from "@/src/app/components/products/product-card"
 import { ReviewForm } from "@/src/app/components/products/review-form"
 import { Product } from "@/src/app/lib/types"
 
-// Main component - make sure it's exported as default
 export default function ProductDetailsPage() {
   const params = useParams()
   const { toast } = useToast()
   const addToCart = useCartStore((state) => state.addItem)
+  
+  // State
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(1) 
   const [activeTab, setActiveTab] = useState("description")
 
+  // Optimized Data Fetching
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const slugParam = params?.slug
+        if (!slugParam) return
+        
+        const slug = Array.isArray(slugParam) ? slugParam[0] : slugParam
+
+        // 1. Get Product First
+        const productData = await productsApi.getProductBySlug(slug)
+        
+        if (!productData) {
+          notFound() // This might need handling in the parent, but works here for client-side
+          return
+        }
+
+        setProduct(productData)
+
+        // 2. Fetch related data in parallel (Faster)
+        if (productData.id) {
+          const [related, reviewsData] = await Promise.all([
+            productsApi.getRelatedProducts(productData.id),
+            reviewsApi.getProductReviews(productData.id)
+          ])
+          
+          setRelatedProducts(related || [])
+          setReviews(reviewsData?.reviews || [])
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch product data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     if (params?.slug) {
-      fetchProductDetails()
+      fetchData()
     }
   }, [params?.slug])
-
-  const fetchProductDetails = async () => {
-    try {
-      setLoading(true)
-      
-      // Safely extract slug
-      const slugParam = params?.slug
-      if (!slugParam) {
-        notFound()
-        return
-      }
-      
-      const slug = Array.isArray(slugParam) ? slugParam[0] : slugParam
-      if (!slug) {
-        notFound()
-        return
-      }
-      
-      const productData = await productsApi.getProductBySlug(slug)
-      setProduct(productData)
-
-      // Fetch related products
-      if (productData?.id) {
-        const related = await productsApi.getRelatedProducts(productData.id)
-        setRelatedProducts(related || [])
-      }
-
-      // Fetch reviews
-      if (productData?.id) {
-        const reviewsData = await reviewsApi.getProductReviews(productData.id)
-        setReviews(reviewsData?.reviews || [])
-      }
-    } catch (error) {
-      console.error("Failed to fetch product:", error)
-      notFound()
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddToCart = () => {
     if (!product) return
@@ -108,7 +105,7 @@ export default function ProductDetailsPage() {
 
     toast({
       title: "Added to cart",
-      description: `${product.name} has been added to your cart`,
+      description: `${quantity} license(s) for ${product.name} added to cart`,
     })
   }
 
@@ -120,20 +117,14 @@ export default function ProductDetailsPage() {
     }
   }
 
-  if (loading) {
-    return <ProductDetailsSkeleton />
-  }
+  if (loading) return <ProductDetailsSkeleton />
+  if (!product) return notFound()
 
-  if (!product) {
-    return notFound()
-  }
-
-  // Get category name safely
+  // Helpers
   const categoryName = typeof product.category === 'string' 
     ? product.category 
     : product.category?.name || 'Uncategorized';
 
-  // Get current price (with discount if available)
   const currentPrice = product.discountedPrice || product.price;
 
   return (
@@ -143,11 +134,7 @@ export default function ProductDetailsPage() {
         <nav className="flex items-center text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground">Home</Link>
           <span className="mx-2">/</span>
-          <Link href="/products" className="hover:text-foreground">Products</Link>
-          <span className="mx-2">/</span>
-          <Link href={`/products?category=${product.categoryId || ''}`} className="hover:text-foreground">
-            {categoryName}
-          </Link>
+          <Link href="/products" className="hover:text-foreground">Software</Link>
           <span className="mx-2">/</span>
           <span className="text-foreground font-medium">{product.name}</span>
         </nav>
@@ -156,27 +143,26 @@ export default function ProductDetailsPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left Column - Images */}
         <div>
-          {/* Main Image */}
-          <Card className="overflow-hidden mb-4">
-            <div className="relative aspect-square">
+          <Card className="overflow-hidden mb-4 bg-muted/30 border-muted">
+            <div className="relative aspect-video flex items-center justify-center">
               <Image
                 src={product.images?.[selectedImage] || "/placeholder.jpg"}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain p-8"
                 priority
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
               {product.isNew && (
-                <Badge className="absolute top-4 left-4 bg-green-500">NEW</Badge>
+                <Badge className="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700">NEW VERSION</Badge>
               )}
               {product.isFeatured && (
-                <Badge className="absolute top-4 right-4 bg-primary">FEATURED</Badge>
+                <Badge className="absolute top-4 right-4 bg-primary">POPULAR</Badge>
               )}
             </div>
           </Card>
 
-          {/* Thumbnail Images */}
+          {/* Thumbnails */}
           {product.images && product.images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-2">
               {product.images.map((image: string, index: number) => (
@@ -189,10 +175,9 @@ export default function ProductDetailsPage() {
                 >
                   <Image
                     src={image || "/placeholder.jpg"}
-                    alt={`${product.name} - ${index + 1}`}
+                    alt={`${product.name} preview ${index + 1}`}
                     fill
                     className="object-cover"
-                    sizes="80px"
                   />
                 </button>
               ))}
@@ -220,7 +205,7 @@ export default function ProductDetailsPage() {
                 ))}
               </div>
               <span className="text-muted-foreground">
-                ({product.reviewCount || 0} reviews)
+                ({product.reviewCount || 0} verified users)
               </span>
               <Badge variant="outline" className="ml-4">
                 {categoryName}
@@ -236,39 +221,42 @@ export default function ProductDetailsPage() {
                     <span className="text-2xl text-muted-foreground line-through">
                       ${product.price}
                     </span>
-                    <Badge className="bg-green-500">
+                    <Badge className="bg-green-600">
                       Save {Math.round((1 - product.discountedPrice / product.price) * 100)}%
                     </Badge>
                   </>
                 )}
+                <span className="text-sm text-muted-foreground self-end mb-2">/ license</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Tax included. Shipping calculated at checkout.
+                One-time payment. Lifetime updates included.
               </p>
             </div>
 
-            {/* Inventory Status */}
+            {/* SaaS Availability Status */}
             <div className="mb-6">
-              {(product.stock || 0) > 0 ? (
+              {product.isActive ? (
                 <div className="flex items-center gap-2 text-green-600">
                   <Check className="h-5 w-5" />
-                  <span>In Stock ({product.stock} available)</span>
+                  <span>Available Now (Instant Delivery)</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-red-600">
                   <Minus className="h-5 w-5" />
-                  <span>Out of Stock</span>
+                  <span>Currently Unavailable</span>
                 </div>
               )}
             </div>
 
             {/* Description */}
-            <p className="text-muted-foreground mb-8">{product.description}</p>
+            <p className="text-muted-foreground mb-8 text-lg leading-relaxed">
+              {product.description}
+            </p>
 
-            {/* Quantity & Add to Cart */}
+            {/* Quantity (Licenses) & Actions */}
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
+                <div className="flex items-center border rounded-lg bg-background">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -277,7 +265,9 @@ export default function ProductDetailsPage() {
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <span className="w-16 text-center font-medium">
+                    {quantity} {quantity === 1 ? 'Seat' : 'Seats'}
+                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -291,10 +281,10 @@ export default function ProductDetailsPage() {
                   size="lg"
                   className="flex-1 gap-2"
                   onClick={handleAddToCart}
-                  disabled={!product.stock || product.stock === 0}
+                  disabled={!product.isActive}
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  {product.stock && product.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                  Add to Cart
                 </Button>
 
                 <Button variant="outline" size="icon">
@@ -306,47 +296,47 @@ export default function ProductDetailsPage() {
                 </Button>
               </div>
 
-              {/* Buy Now Button */}
               <Button
                 size="lg"
-                className="w-full gap-2"
-                variant="secondary"
-                disabled={!product.stock || product.stock === 0}
+                className="w-full gap-2 text-lg py-6"
+                variant="default" // Changed to primary for emphasis
+                disabled={!product.isActive}
               >
-                Buy Now
+                <Zap className="h-5 w-5" />
+                Get Instant Access
               </Button>
             </div>
 
-            {/* Features */}
-            <Card className="mb-8">
+            {/* SaaS Features Grid */}
+            <Card className="mb-8 bg-slate-50 dark:bg-slate-900/50 border-none shadow-sm">
               <CardContent className="p-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Truck className="h-5 w-5 text-primary" />
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <p className="font-medium">Free Shipping</p>
-                      <p className="text-sm text-muted-foreground">On orders over $100</p>
+                      <p className="font-semibold text-sm">Instant Access</p>
+                      <p className="text-xs text-muted-foreground">Get your API Key immediately</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Package className="h-5 w-5 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <Cloud className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <p className="font-medium">Easy Returns</p>
-                      <p className="text-sm text-muted-foreground">30-day return policy</p>
+                      <p className="font-semibold text-sm">Cloud Hosted</p>
+                      <p className="text-xs text-muted-foreground">99.9% Uptime Guarantee</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <p className="font-medium">Secure Payment</p>
-                      <p className="text-sm text-muted-foreground">100% secure & encrypted</p>
+                      <p className="font-semibold text-sm">Secure</p>
+                      <p className="text-xs text-muted-foreground">256-bit SSL Encryption</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <RefreshCw className="h-5 w-5 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <LifeBuoy className="h-5 w-5 text-primary mt-1" />
                     <div>
-                      <p className="font-medium">Warranty</p>
-                      <p className="text-sm text-muted-foreground">2-year warranty included</p>
+                      <p className="font-semibold text-sm">24/7 Support</p>
+                      <p className="text-xs text-muted-foreground">Direct developer access</p>
                     </div>
                   </div>
                 </div>
@@ -359,34 +349,37 @@ export default function ProductDetailsPage() {
       {/* Tabs Section */}
       <div className="mt-12">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="description" className="flex-1">
-              Description
+          <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 rounded-xl">
+            <TabsTrigger value="description" className="py-2.5 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Overview
             </TabsTrigger>
-            <TabsTrigger value="specifications" className="flex-1">
-              Specifications
+            <TabsTrigger value="specifications" className="py-2.5 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Tech Specs
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex-1">
+            <TabsTrigger value="reviews" className="py-2.5 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
               Reviews ({reviews.length})
             </TabsTrigger>
-            <TabsTrigger value="shipping" className="flex-1">
-              Shipping & Returns
+            <TabsTrigger value="delivery" className="py-2.5 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Delivery & Support
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="description" className="mt-6">
+          <TabsContent value="description" className="mt-8 animate-in fade-in-50 duration-500">
             <Card>
-              <CardContent className="p-6">
-                <div className="prose max-w-none">
-                  <h3>Product Description</h3>
-                  <p>{product.description}</p>
+              <CardContent className="p-8">
+                <div className="prose dark:prose-invert max-w-none">
+                  <h3 className="text-xl font-semibold mb-4">About {product.name}</h3>
+                  <p className="mb-6">{product.description}</p>
                   
                   {product.features && product.features.length > 0 && (
                     <>
-                      <h4>Key Features</h4>
-                      <ul>
+                      <h4 className="text-lg font-semibold mb-3">Key Capabilities</h4>
+                      <ul className="grid sm:grid-cols-2 gap-2 list-none p-0">
                         {product.features.map((feature: string, index: number) => (
-                          <li key={index}>{feature}</li>
+                          <li key={index} className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
                         ))}
                       </ul>
                     </>
@@ -396,70 +389,89 @@ export default function ProductDetailsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="specifications" className="mt-6">
+          <TabsContent value="specifications" className="mt-8 animate-in fade-in-50 duration-500">
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
+              <CardContent className="p-8">
+                <h3 className="text-xl font-semibold mb-6">Technical Specifications</h3>
+                <div className="grid sm:grid-cols-2 gap-x-12 gap-y-4">
                   {product.specifications && Object.keys(product.specifications).length > 0 ? (
                     Object.entries(product.specifications).map(([key, value]: [string, any]) => (
-                      <div key={key} className="flex justify-between py-3 border-b">
+                      <div key={key} className="flex justify-between py-3 border-b border-border">
                         <span className="font-medium text-muted-foreground">
                           {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                         </span>
-                        <span className="font-medium">{String(value)}</span>
+                        <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
+                          {String(value)}
+                        </span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground">No specifications available.</p>
+                    <p className="text-muted-foreground">No technical specifications available for this tool.</p>
                   )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="reviews" className="mt-6">
+          <TabsContent value="reviews" className="mt-8 animate-in fade-in-50 duration-500">
             <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <div className="space-y-4">
-                  {reviews.length > 0 ? (
-                    reviews.map((review) => (
-                      <ReviewCard key={review.id} review={review} />
-                    ))
-                  ) : (
-                    <Card>
-                      <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+              <div className="lg:col-span-2 space-y-4">
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))
+                ) : (
+                  <Card className="bg-muted/30 border-dashed">
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Star className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-semibold mb-2">No reviews yet</h3>
+                      <p className="text-muted-foreground">Be the first to share your experience with {product.name}!</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-              
-              <div>
-                <ReviewForm productId={product.id} />
+              <div className="lg:col-span-1">
+                <div className="sticky top-24">
+                   <ReviewForm productId={product.id} />
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="shipping" className="mt-6">
+          <TabsContent value="delivery" className="mt-8 animate-in fade-in-50 duration-500">
             <Card>
-              <CardContent className="p-6">
-                <div className="prose max-w-none">
-                  <h3>Shipping Information</h3>
-                  <ul>
-                    <li>Standard shipping: 5-7 business days</li>
-                    <li>Express shipping: 2-3 business days</li>
-                    <li>Free shipping on orders over $100</li>
-                    <li>International shipping available</li>
-                  </ul>
-                  
-                  <h3>Return Policy</h3>
-                  <ul>
-                    <li>30-day return policy</li>
-                    <li>Items must be in original condition</li>
-                    <li>Free returns for defective items</li>
-                    <li>Refund processed within 7 business days</li>
-                  </ul>
+              <CardContent className="p-8">
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      Instant Digital Delivery
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      This is a digital product. You will receive your access credentials and API keys immediately after payment confirmation.
+                    </p>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li>• Instant access via User Dashboard</li>
+                      <li>• Confirmation email with license keys</li>
+                      <li>• Documentation and setup guide included</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <LifeBuoy className="h-5 w-5 text-primary" />
+                      Technical Support
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      We stand by our software. Every purchase includes standard technical support.
+                    </p>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li>• 24/7 Email Support</li>
+                      <li>• Access to Knowledge Base</li>
+                      <li>• Community Forum Access</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -469,14 +481,14 @@ export default function ProductDetailsPage() {
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <div className="mt-16">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Related Products</h2>
+        <div className="mt-16 border-t pt-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold">Similar Tools</h2>
             <Link
               href="/products"
-              className="text-primary hover:underline flex items-center gap-2"
+              className="text-primary hover:text-primary/80 flex items-center gap-2 font-medium"
             >
-              View All
+              View All Software
               <ArrowLeft className="h-4 w-4 rotate-180" />
             </Link>
           </div>
@@ -496,23 +508,26 @@ function ProductDetailsSkeleton() {
   return (
     <div className="container py-8">
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Image Skeleton */}
         <div>
-          <Skeleton className="aspect-square w-full rounded-lg mb-4" />
+          <Skeleton className="aspect-video w-full rounded-lg mb-4" />
           <div className="flex gap-2">
             {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="w-20 h-20 rounded-lg" />
             ))}
           </div>
         </div>
-
-        {/* Info Skeleton */}
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-10 w-1/4" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-12 w-full" />
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-3/4" />
+          <div className="flex gap-4">
+             <Skeleton className="h-5 w-32" />
+             <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="h-16 w-1/2" />
+          <Skeleton className="h-32 w-full" />
+          <div className="flex gap-4 pt-4">
+             <Skeleton className="h-12 w-32" />
+             <Skeleton className="h-12 flex-1" />
+          </div>
         </div>
       </div>
     </div>
