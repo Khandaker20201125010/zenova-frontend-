@@ -149,7 +149,7 @@ export const validationSchemas = {
     sku: z.string().max(100, VALIDATION_MESSAGES.MAX_LENGTH(100)).optional(),
     isFeatured: z.boolean().optional(),
     isNew: z.boolean().optional(),
-    specifications: z.record(z.any()).optional(),
+    specifications: z.record(z.string(), z.any()).optional(),
   }),
   
   // Order schemas

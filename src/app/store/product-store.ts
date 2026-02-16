@@ -2,7 +2,6 @@
 import { create } from "zustand"
 import { Product } from "../lib/types"
 
-
 interface ProductStore {
   // State
   products: Product[]
@@ -28,7 +27,7 @@ interface ProductStore {
   isFavorite: (productId: string) => boolean
   getProduct: (productId: string) => Product | undefined
   getRelatedProducts: (productId: string, limit?: number) => Product[]
-  getProductsByCategory: (category: string) => Product[]
+  getProductsByCategory: (categoryId: string) => Product[]
   getProductsByTag: (tag: string) => Product[]
 }
 
@@ -107,16 +106,20 @@ export const useProductStore = create<ProductStore>((set, get) => ({
     const product = get().getProduct(productId)
     if (!product) return []
     
+    // Match by categoryId instead of category string
+    const categoryId = product.categoryId
+    
     return get().products
-      .filter((p) => p.id !== productId && p.category === product.category)
+      .filter((p) => p.id !== productId && p.categoryId === categoryId)
       .slice(0, limit)
   },
   
-  getProductsByCategory: (category) => {
-    return get().products.filter((p) => p.category === category)
+  getProductsByCategory: (categoryId) => {
+    // Now filtering by categoryId instead of category string
+    return get().products.filter((p) => p.categoryId === categoryId)
   },
   
   getProductsByTag: (tag) => {
-    return get().products.filter((p) => p.tags.includes(tag))
+    return get().products.filter((p) => p.tags?.includes(tag) || false)
   },
 }))
