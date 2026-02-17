@@ -59,6 +59,23 @@ export default function ProductsGrid({
     )
   }
 
+  // Helper function to get category name safely
+  const getCategoryName = (product: Product): string => {
+    if (typeof product.category === 'string') {
+      return product.category
+    }
+    return product.category?.name || 'Uncategorized'
+  }
+
+  // Helper function to get stock status
+  const getStockStatus = (product: Product): { text: string; inStock: boolean } => {
+    const stock = product.stock || 0
+    return {
+      text: stock > 0 ? "In Stock" : "Out of Stock",
+      inStock: stock > 0
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Toolbar */}
@@ -152,88 +169,93 @@ export default function ProductsGrid({
               </div>
             ) : (
               <div className="space-y-4">
-                {products.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="card overflow-hidden"
-                  >
-                    <div className="flex flex-col md:flex-row">
-                      {/* Product Image */}
-                      <div className="md:w-48 h-48 md:h-auto relative">
-                        <Image
-                          fill
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      
-                      {/* Product Info */}
-                      <div className="flex-1 p-6">
-                        <div className="flex flex-col h-full">
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="text-lg font-semibold">
-                                  {product.name}
-                                </h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {product.description}
-                                </p>
-                              </div>
-                              <span className="text-2xl font-bold">
-                                ${product.price.toFixed(2)}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <span
-                                    key={i}
-                                    className={`text-sm ${
-                                      i < Math.floor(product.rating)
-                                        ? "text-yellow-400"
-                                        : "text-gray-300"
-                                    }`}
-                                  >
-                                    ★
-                                  </span>
-                                ))}
-                                <span className="text-sm text-muted-foreground ml-1">
-                                  ({product.reviewCount})
+                {products.map((product, index) => {
+                  const categoryName = getCategoryName(product)
+                  const stockStatus = getStockStatus(product)
+                  
+                  return (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="card overflow-hidden"
+                    >
+                      <div className="flex flex-col md:flex-row">
+                        {/* Product Image */}
+                        <div className="md:w-48 h-48 md:h-auto relative">
+                          <Image
+                            fill
+                            src={product.images?.[0] || "/placeholder.jpg"}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        
+                        {/* Product Info */}
+                        <div className="flex-1 p-6">
+                          <div className="flex flex-col h-full">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h3 className="text-lg font-semibold">
+                                    {product.name}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground line-clamp-2">
+                                    {product.description}
+                                  </p>
+                                </div>
+                                <span className="text-2xl font-bold">
+                                  ${(product.discountedPrice || product.price).toFixed(2)}
                                 </span>
                               </div>
-                              <span className="text-sm text-muted-foreground">
-                                {product.category}
-                              </span>
-                              <span className={`text-sm ${
-                                product.inventory > 0 ? "text-green-600" : "text-red-600"
-                              }`}>
-                                {product.inventory > 0 ? "In Stock" : "Out of Stock"}
-                              </span>
+                              
+                              <div className="flex items-center gap-4 mb-4">
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <span
+                                      key={i}
+                                      className={`text-sm ${
+                                        i < Math.floor(product.rating || 0)
+                                          ? "text-yellow-400"
+                                          : "text-gray-300"
+                                      }`}
+                                    >
+                                      ★
+                                    </span>
+                                  ))}
+                                  <span className="text-sm text-muted-foreground ml-1">
+                                    ({product.reviewCount || 0})
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {categoryName}
+                                </span>
+                                <span className={`text-sm ${
+                                  stockStatus.inStock ? "text-green-600" : "text-red-600"
+                                }`}>
+                                  {stockStatus.text}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Button size="sm">Add to Cart</Button>
-                              <Button size="sm" variant="outline">
-                                View Details
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button size="sm">Add to Cart</Button>
+                                <Button size="sm" variant="outline">
+                                  View Details
+                                </Button>
+                              </div>
+                              <Button size="sm" variant="ghost">
+                                <Heart className="h-4 w-4" />
                               </Button>
                             </div>
-                            <Button size="sm" variant="ghost">
-                              <Heart className="h-4 w-4" />
-                            </Button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  )
+                })}
               </div>
             )
           ) : (

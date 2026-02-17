@@ -32,18 +32,10 @@ import { Pagination, PaginationInfo } from "../../components/shared/pagination"
 import { Skeleton } from "../../components/ui/skeleton"
 import Image from "next/image"
 import { useProductsQuery } from "../../hooks/use-query"
+import { useCategories } from "../../hooks/use-categories"
 import { Slider } from "@/components/ui/slider"
 import { ProductCard } from "@/src/app/components/products/product-card"
-
-const categories = [
-  "All Categories",
-  "Analytics",
-  "E-Commerce",
-  "Productivity",
-  "Marketing",
-  "Collaboration",
-  "Security",
-]
+import { Category } from "@/src/app/lib/types"
 
 const tags = [
   "Popular",
@@ -62,21 +54,14 @@ const sortOptions = [
   { label: "Rating", value: "rating" },
 ]
 
-interface ProductsResponse {
-  products: any[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
 export default function ProductsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All Categories")
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [selectedCategoryName, setSelectedCategoryName] = useState("All Categories")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [sortBy, setSortBy] = useState("popular")
@@ -84,11 +69,24 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false)
 
   const limit = 12
+  
+  // Fetch categories from backend
+  const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError } = useCategories()
+  
+  // Debug logs
+  useEffect(() => {
+    console.log("Categories data:", categoriesData)
+    console.log("Categories loading:", categoriesLoading)
+    console.log("Categories error:", categoriesError)
+  }, [categoriesData, categoriesLoading, categoriesError])
+  
+  const categories = Array.isArray(categoriesData) ? categoriesData : []
+
   const { data: productsData, isLoading } = useProductsQuery({
     page,
     limit,
-    search: searchQuery,
-    category: selectedCategory !== "All Categories" ? selectedCategory : undefined,
+    search: searchQuery || undefined,
+    category: selectedCategoryId || undefined,
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     minPrice: priceRange[0],
     maxPrice: priceRange[1],
@@ -96,7 +94,7 @@ export default function ProductsPage() {
             sortBy === "price_desc" ? "price" :
             sortBy === "rating" ? "rating" : "createdAt",
     sortOrder: sortBy === "price_desc" ? "desc" : "asc",
-  }) as { data: ProductsResponse | undefined; isLoading: boolean }
+  })
 
   const products = productsData?.products || []
   const total = productsData?.total || 0
@@ -107,7 +105,7 @@ export default function ProductsPage() {
     if (searchQuery) params.set("search", searchQuery)
     else params.delete("search")
     
-    if (selectedCategory !== "All Categories") params.set("category", selectedCategory)
+    if (selectedCategoryId) params.set("category", selectedCategoryId)
     else params.delete("category")
     
     if (selectedTags.length > 0) params.set("tags", selectedTags.join(","))
@@ -119,7 +117,18 @@ export default function ProductsPage() {
     params.set("page", page.toString())
     
     router.push(`/products?${params.toString()}`, { scroll: false })
-  }, [searchQuery, selectedCategory, selectedTags, priceRange, sortBy, page, router, searchParams])
+  }, [searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy, page, router, searchParams])
+
+  const handleCategorySelect = (category: Category | null) => {
+    if (category) {
+      setSelectedCategoryId(category.id)
+      setSelectedCategoryName(category.name)
+    } else {
+      setSelectedCategoryId(null)
+      setSelectedCategoryName("All Categories")
+    }
+    setPage(1)
+  }
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags(prev =>
@@ -127,15 +136,25 @@ export default function ProductsPage() {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     )
+    setPage(1)
   }
 
   const clearFilters = () => {
     setSearchQuery("")
-    setSelectedCategory("All Categories")
+    setSelectedCategoryId(null)
+    setSelectedCategoryName("All Categories")
     setSelectedTags([])
     setPriceRange([0, 1000])
     setSortBy("popular")
     setPage(1)
+  }
+
+  // Helper function to get category name for display
+  const getCategoryName = (product: any): string => {
+    if (typeof product.category === 'string') {
+      return product.category
+    }
+    return product.category?.name || 'Uncategorized'
   }
 
   return (
@@ -178,24 +197,53 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Categories */}
+              {/* Categories from Backend */}
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Categories</h4>
-                <div className="space-y-2">
-                  {categories.map((category) => (
+                {categoriesLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-8 w-full" />
+                    ))}
+                  </div>
+                ) : categories.length > 0 ? (
+                  <div className="space-y-2">
                     <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
+                      onClick={() => handleCategorySelect(null)}
                       className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        selectedCategory === category
+                        !selectedCategoryId
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent"
                       }`}
                     >
-                      {category}
+                      All Categories
                     </button>
-                  ))}
-                </div>
+                    {categories.map((category: any) => (
+                      <button
+                        key={category.id}
+                        onClick={() => handleCategorySelect(category)}
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                          selectedCategoryId === category.id
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-accent"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{category.name}</span>
+                          {category._count?.products > 0 && (
+                            <span className="text-xs bg-muted px-2 py-1 rounded-full">
+                              {category._count.products}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground py-2">
+                    No categories found
+                  </div>
+                )}
               </div>
 
               <Separator className="my-6" />
@@ -259,6 +307,11 @@ export default function ProductsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="text-sm text-muted-foreground">
               Showing {products.length} of {total} products
+              {selectedCategoryName !== "All Categories" && (
+                <span className="ml-2">
+                  in <span className="font-medium">{selectedCategoryName}</span>
+                </span>
+              )}
             </div>
             
             <div className="flex items-center gap-4">
@@ -351,75 +404,80 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {products.map((product: any, index: number) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        {/* Product Image */}
-                        <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image
-                            fill
-                            src={product.images[0] || "/placeholder-product.jpg"}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                          />
+              {products.map((product: any, index: number) => {
+                const categoryName = getCategoryName(product)
+                const stock = product.stock || 0
+                
+                return (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <Image
+                              fill
+                              src={product.images?.[0] || "/placeholder-product.jpg"}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className="font-semibold text-lg mb-1">
+                                  {product.name}
+                                </h3>
+                                <p className="text-muted-foreground line-clamp-2 mb-3">
+                                  {product.description}
+                                </p>
+                              </div>
+                              <div className="text-2xl font-bold">
+                                ${(product.discountedPrice || product.price).toFixed(2)}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <Badge variant="outline">
+                                {categoryName}
+                              </Badge>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm">{product.rating || 0}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  ({product.reviewCount || 0})
+                                </span>
+                              </div>
+                              {stock > 0 ? (
+                                <Badge className="bg-green-500">In Stock</Badge>
+                              ) : (
+                                <Badge variant="destructive">Out of Stock</Badge>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3 mt-4">
+                              <Button size="sm">Add to Cart</Button>
+                              <Button size="sm" variant="outline">
+                                View Details
+                              </Button>
+                              <Button size="sm" variant="ghost">
+                                Add to Wishlist
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-
-                        {/* Product Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-lg mb-1">
-                                {product.name}
-                              </h3>
-                              <p className="text-muted-foreground line-clamp-2 mb-3">
-                                {product.description}
-                              </p>
-                            </div>
-                            <div className="text-2xl font-bold">
-                              ${product.price}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <Badge variant="outline">
-                              {product.category}
-                            </Badge>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm">{product.rating}</span>
-                              <span className="text-sm text-muted-foreground">
-                                ({product.reviewCount})
-                              </span>
-                            </div>
-                            {product.inventory > 0 ? (
-                              <Badge className="bg-green-500">In Stock</Badge>
-                            ) : (
-                              <Badge variant="destructive">Out of Stock</Badge>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3 mt-4">
-                            <Button size="sm">Add to Cart</Button>
-                            <Button size="sm" variant="outline">
-                              View Details
-                            </Button>
-                            <Button size="sm" variant="ghost">
-                              Add to Wishlist
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )
+              })}
             </div>
           )}
 
