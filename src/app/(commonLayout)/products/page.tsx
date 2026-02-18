@@ -5,11 +5,11 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { 
-  Filter, 
-  Grid, 
-  List, 
-  Search, 
+import {
+  Filter,
+  Grid,
+  List,
+  Search,
   ChevronDown,
   X,
   Star,
@@ -57,7 +57,7 @@ const sortOptions = [
 export default function ProductsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -66,23 +66,24 @@ export default function ProductsPage() {
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [sortBy, setSortBy] = useState("popular")
   const [page, setPage] = useState(1)
-  const [showFilters, setShowFilters] = useState(false)
+  const [, setShowFilters] = useState(false)
 
   const limit = 12
-  
+
   // Fetch categories from backend
-  const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError } = useCategories()
-  
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories()
+
+
   // Debug logs
-  useEffect(() => {
-    console.log("Categories data:", categoriesData)
-    console.log("Categories loading:", categoriesLoading)
-    console.log("Categories error:", categoriesError)
-  }, [categoriesData, categoriesLoading, categoriesError])
-  
+  // useEffect(() => {
+  //   console.log("Categories data:", categoriesData)
+  //   console.log("Categories loading:", categoriesLoading)
+  //   console.log("Categories error:", categoriesError)
+  // }, [categoriesData, categoriesLoading, categoriesError])
+
   const categories = Array.isArray(categoriesData) ? categoriesData : []
 
-  const { data: productsData, isLoading } = useProductsQuery({
+   const { data: productsData, isLoading } = useProductsQuery({
     page,
     limit,
     search: searchQuery || undefined,
@@ -90,45 +91,64 @@ export default function ProductsPage() {
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     minPrice: priceRange[0],
     maxPrice: priceRange[1],
-    sortBy: sortBy === "price_asc" ? "price" : 
-            sortBy === "price_desc" ? "price" :
-            sortBy === "rating" ? "rating" : "createdAt",
+    sortBy: sortBy === "price_asc" ? "price" :
+      sortBy === "price_desc" ? "price" :
+        sortBy === "rating" ? "rating" : "createdAt",
     sortOrder: sortBy === "price_desc" ? "desc" : "asc",
   })
 
-  const products = productsData?.products || []
+   const products = productsData?.products || []
   const total = productsData?.total || 0
+  const totalPages = productsData?.totalPages || 1
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
-    
+
     if (searchQuery) params.set("search", searchQuery)
     else params.delete("search")
-    
+
     if (selectedCategoryId) params.set("category", selectedCategoryId)
     else params.delete("category")
-    
+
     if (selectedTags.length > 0) params.set("tags", selectedTags.join(","))
     else params.delete("tags")
-    
+
     params.set("minPrice", priceRange[0].toString())
     params.set("maxPrice", priceRange[1].toString())
     params.set("sort", sortBy)
     params.set("page", page.toString())
-    
+
     router.push(`/products?${params.toString()}`, { scroll: false })
   }, [searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy, page, router, searchParams])
 
+useEffect(() => {
+  console.log("Current filters:", {
+    page,
+    limit,
+    search: searchQuery || undefined,
+    category: selectedCategoryId,
+    categoryName: selectedCategoryName,
+    tags: selectedTags,
+    minPrice: priceRange[0],
+    maxPrice: priceRange[1],
+    sortBy: sortBy === "price_asc" ? "price" :
+      sortBy === "price_desc" ? "price" :
+      sortBy === "rating" ? "rating" : "createdAt",
+    sortOrder: sortBy === "price_desc" ? "desc" : "asc",
+  })
+}, [page, limit, searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy])
+
   const handleCategorySelect = (category: Category | null) => {
-    if (category) {
-      setSelectedCategoryId(category.id)
-      setSelectedCategoryName(category.name)
-    } else {
-      setSelectedCategoryId(null)
-      setSelectedCategoryName("All Categories")
-    }
-    setPage(1)
+  if (category) {
+    setSelectedCategoryId(category.id)  // This should be the category ID
+    setSelectedCategoryName(category.name)
+    console.log("Selected category:", { id: category.id, name: category.name })
+  } else {
+    setSelectedCategoryId(null)
+    setSelectedCategoryName("All Categories")
   }
+  setPage(1)
+}
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags(prev =>
@@ -156,6 +176,14 @@ export default function ProductsPage() {
     }
     return product.category?.name || 'Uncategorized'
   }
+
+  const handleSearch = (e: React.FormEvent) => {
+  e.preventDefault()
+  if (searchQuery.trim()) {
+    setSearchQuery(searchQuery.trim())
+    setPage(1)
+  }
+}
 
   return (
     <div className="container py-8">
@@ -210,11 +238,10 @@ export default function ProductsPage() {
                   <div className="space-y-2">
                     <button
                       onClick={() => handleCategorySelect(null)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        !selectedCategoryId
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${!selectedCategoryId
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent"
-                      }`}
+                        }`}
                     >
                       All Categories
                     </button>
@@ -222,11 +249,10 @@ export default function ProductsPage() {
                       <button
                         key={category.id}
                         onClick={() => handleCategorySelect(category)}
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                          selectedCategoryId === category.id
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selectedCategoryId === category.id
                             ? "bg-primary text-primary-foreground"
                             : "hover:bg-accent"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <span>{category.name}</span>
@@ -313,7 +339,7 @@ export default function ProductsPage() {
                 </span>
               )}
             </div>
-            
+
             <div className="flex items-center gap-4">
               {/* View Toggle */}
               <div className="flex items-center gap-1 border rounded-md p-1">
@@ -407,7 +433,7 @@ export default function ProductsPage() {
               {products.map((product: any, index: number) => {
                 const categoryName = getCategoryName(product)
                 const stock = product.stock || 0
-                
+
                 return (
                   <motion.div
                     key={product.id}

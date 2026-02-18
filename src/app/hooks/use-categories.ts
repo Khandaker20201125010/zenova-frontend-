@@ -18,7 +18,6 @@ export function useCategories(includeProducts = false) {
     queryFn: async () => {
       try {
         const response = await categoriesApi.getCategories(includeProducts)
-        console.log("Categories loaded:", response)
        return Array.isArray(response) ? response : [] 
       } catch (error) {
         console.error('Error in useCategories:', error)

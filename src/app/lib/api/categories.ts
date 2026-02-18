@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/categories.ts
 import { apiClient } from './axios-client'
-import { Category, ApiResponse } from '../types'
+import { Category } from '../types'
 
 export interface CategoryWithCount extends Category {
   _count?: {
@@ -18,7 +18,7 @@ export const categoriesApi = {
       const response = await apiClient.get<any>('/categories', { 
         params: { includeProducts } 
       })
-      console.log('Categories API raw response:', response)
+      
       
       // Check if response has data property (API response format)
       if (response && response.data && Array.isArray(response.data)) {
