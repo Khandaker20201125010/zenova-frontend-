@@ -121,22 +121,22 @@ export default function ProductsPage() {
     router.push(`/products?${params.toString()}`, { scroll: false })
   }, [searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy, page, router, searchParams])
 
-useEffect(() => {
-  console.log("Current filters:", {
-    page,
-    limit,
-    search: searchQuery || undefined,
-    category: selectedCategoryId,
-    categoryName: selectedCategoryName,
-    tags: selectedTags,
-    minPrice: priceRange[0],
-    maxPrice: priceRange[1],
-    sortBy: sortBy === "price_asc" ? "price" :
-      sortBy === "price_desc" ? "price" :
-      sortBy === "rating" ? "rating" : "createdAt",
-    sortOrder: sortBy === "price_desc" ? "desc" : "asc",
-  })
-}, [page, limit, searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy])
+// useEffect(() => {
+//   console.log("Current filters:", {
+//     page,
+//     limit,
+//     search: searchQuery || undefined,
+//     category: selectedCategoryId,
+//     categoryName: selectedCategoryName,
+//     tags: selectedTags,
+//     minPrice: priceRange[0],
+//     maxPrice: priceRange[1],
+//     sortBy: sortBy === "price_asc" ? "price" :
+//       sortBy === "price_desc" ? "price" :
+//       sortBy === "rating" ? "rating" : "createdAt",
+//     sortOrder: sortBy === "price_desc" ? "desc" : "asc",
+//   })
+// }, [page, limit, searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy])
 
   const handleCategorySelect = (category: Category | null) => {
   if (category) {
