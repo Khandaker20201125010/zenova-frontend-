@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// hooks/use-query.ts
 "use client"
 
 import { useQuery as useReactQuery } from "@tanstack/react-query"
@@ -30,9 +29,24 @@ export function useProductsQuery(filters?: any) {
   return useReactQuery<ProductsResponse>({
     queryKey: ["products", filters],
     queryFn: async () => {
-      const flatFilters = { ...filters };
+      const flatParams: any = {};
+      
+      Object.keys(filters || {}).forEach(key => {
+        const value = filters[key];
+        
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            flatParams[key] = value.join(',');
+          } else if (typeof value === 'boolean') {
+            flatParams[key] = value.toString();
+          } else {
+            flatParams[key] = value;
+          }
+        }
+      });
+      
       const response = await apiClient.get<any>("/products", { 
-        params: flatFilters
+        params: flatParams
       });
       
       if (Array.isArray(response)) {
@@ -42,6 +56,16 @@ export function useProductsQuery(filters?: any) {
           page: 1,
           limit: 12,
           totalPages: Math.ceil(response.length / 12),
+        };
+      }
+      
+      if (response && response.data && Array.isArray(response.data)) {
+        return {
+          products: response.data,
+          total: response.meta?.total || response.data.length,
+          page: response.meta?.page || 1,
+          limit: response.meta?.limit || 12,
+          totalPages: response.meta?.totalPages || 1,
         };
       }
       

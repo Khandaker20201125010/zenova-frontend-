@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/products/page.tsx
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -13,7 +12,8 @@ import {
   ChevronDown,
   X,
   Star,
-  Package
+  Package,
+  Tag as TagIcon
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -36,18 +36,8 @@ import { useCategories } from "../../hooks/use-categories"
 import { Slider } from "@/components/ui/slider"
 import { ProductCard } from "@/src/app/components/products/product-card"
 import { Category } from "@/src/app/lib/types"
+import { useTags } from "../../hooks/use-tags"
 
-// Update tags to use value/label pairs
-const tags = [
-  { label: "New", value: "new" },
-  { label: "Popular", value: "popular" },
-  { label: "Featured", value: "featured" },
-  { label: "Best Seller", value: "best-seller" },
-  { label: "On Sale", value: "on-sale" },
-  { label: "Limited", value: "limited" },
-]
-
-// Sort options with proper mapping
 const sortOptions = [
   { label: "Most Popular", value: "popular", sortBy: "rating", sortOrder: "desc" },
   { label: "Newest", value: "newest", sortBy: "createdAt", sortOrder: "desc" },
@@ -60,10 +50,8 @@ export default function ProductsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // --- Local state for input fields ---
   const [localSearchQuery, setLocalSearchQuery] = useState(searchParams.get("search") || "")
 
-  // --- State derived from URL ---
   const searchQuery = searchParams.get("search") || ""
   const selectedCategoryId = searchParams.get("category")
   const selectedTags = useMemo(() => searchParams.get("tags")?.split(",").filter(Boolean) || [], [searchParams])
@@ -75,25 +63,23 @@ export default function ProductsPage() {
   const inStock = searchParams.get("inStock") === "true"
   const limit = 12
 
-  // Find the current sort option
   const currentSortOption = sortOptions.find(opt => opt.value === sortValue) || sortOptions[0]
 
-  // --- UI-only state ---
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
 
-  // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories()
   const categories = Array.isArray(categoriesData) ? categoriesData : []
 
-  // Find selected category name
+  const { data: tagsData, isLoading: tagsLoading } = useTags()
+  const tags = Array.isArray(tagsData) ? tagsData : []
+
   const selectedCategoryName = useMemo(() => {
     if (!selectedCategoryId) return "All Categories"
     const category = categories.find(c => c.id === selectedCategoryId)
     return category?.name || "All Categories"
   }, [selectedCategoryId, categories])
 
-  // Fetch products with proper sort parameters
   const { data: productsData, isLoading } = useProductsQuery({
     page,
     limit,
@@ -111,7 +97,6 @@ export default function ProductsPage() {
   const total = productsData?.total || 0
   const totalPages = productsData?.totalPages || 1
 
-  // --- Helper to build new URL ---
   const buildUrl = useCallback((updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
     
@@ -123,7 +108,6 @@ export default function ProductsPage() {
       }
     })
     
-    // Always reset to page 1 when filters change (except page itself)
     if (!('page' in updates)) {
       params.set('page', '1')
     }
@@ -133,7 +117,6 @@ export default function ProductsPage() {
     return queryString ? `/products?${queryString}` : "/products"
   }, [searchParams, limit])
 
-  // --- Event Handlers ---
   const handleCategorySelect = (category: Category | null) => {
     const url = buildUrl({ category: category?.id || null })
     router.push(url, { scroll: false })
@@ -143,6 +126,7 @@ export default function ProductsPage() {
     const newTags = selectedTags.includes(tagValue)
       ? selectedTags.filter(t => t !== tagValue)
       : [...selectedTags, tagValue]
+    
     const url = buildUrl({ tags: newTags.length ? newTags.join(',') : null })
     router.push(url, { scroll: false })
   }
@@ -187,8 +171,16 @@ export default function ProductsPage() {
   }
 
   const handleInStockChange = (checked: boolean) => {
-    const url = buildUrl({ inStock: checked ? 'true' : null })
-    router.push(url, { scroll: false })
+    const url = buildUrl({ inStock: checked ? 'true' : null });
+    router.push(url, { scroll: false });
+  }
+
+  const formatTagLabel = (tag: string) => {
+    if (!tag) return ''
+    return tag
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   return (
@@ -201,7 +193,6 @@ export default function ProductsPage() {
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
         <div className="lg:col-span-1">
           <Card className="sticky top-24">
             <CardContent className="p-6">
@@ -217,7 +208,6 @@ export default function ProductsPage() {
                 </Button>
               </div>
 
-              {/* Search */}
               <div className="mb-6">
                 <form onSubmit={handleSearch}>
                   <div className="relative">
@@ -232,7 +222,6 @@ export default function ProductsPage() {
                 </form>
               </div>
 
-              {/* Categories */}
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Categories</h4>
                 {categoriesLoading ? (
@@ -241,7 +230,7 @@ export default function ProductsPage() {
                       <Skeleton key={i} className="h-8 w-full" />
                     ))}
                   </div>
-                ) : (
+                ) : categories.length > 0 ? (
                   <div className="space-y-2">
                     <button
                       onClick={() => handleCategorySelect(null)}
@@ -274,12 +263,15 @@ export default function ProductsPage() {
                       </button>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground py-2">
+                    No categories found
+                  </div>
                 )}
               </div>
 
               <Separator className="my-6" />
 
-              {/* Price Range */}
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Price Range</h4>
                 <div className="space-y-4">
@@ -300,26 +292,42 @@ export default function ProductsPage() {
 
               <Separator className="my-6" />
 
-              {/* Tags */}
               <div className="mb-6">
-                <h4 className="font-medium mb-3">Tags</h4>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge
-                      key={tag.value}
-                      variant={selectedTags.includes(tag.value) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => handleTagToggle(tag.value)}
-                    >
-                      {tag.label}
-                    </Badge>
-                  ))}
+                <div className="flex items-center gap-2 mb-3">
+                  <TagIcon className="h-4 w-4" />
+                  <h4 className="font-medium">Tags</h4>
                 </div>
+                {tagsLoading ? (
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-8 w-16 rounded-full" />
+                    ))}
+                  </div>
+                ) : tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant={selectedTags.includes(tag) ? "default" : "outline"}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => handleTagToggle(tag)}
+                      >
+                        {formatTagLabel(tag)}
+                        {selectedTags.includes(tag) && (
+                          <span className="ml-1 text-xs">✓</span>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground py-2">
+                    No tags available
+                  </div>
+                )}
               </div>
 
               <Separator className="my-6" />
 
-              {/* In Stock */}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="inStock" 
@@ -337,9 +345,7 @@ export default function ProductsPage() {
           </Card>
         </div>
 
-        {/* Products Grid */}
         <div className="lg:col-span-3">
-          {/* Toolbar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="text-sm text-muted-foreground">
               Showing {products.length} of {total} products
@@ -348,10 +354,14 @@ export default function ProductsPage() {
                   in <span className="font-medium">{selectedCategoryName}</span>
                 </span>
               )}
+              {selectedTags.length > 0 && (
+                <span className="ml-2">
+                  with tags: <span className="font-medium">{selectedTags.map(formatTagLabel).join(', ')}</span>
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
-              {/* View Toggle */}
               <div className="flex items-center gap-1 border rounded-md p-1">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
@@ -371,7 +381,6 @@ export default function ProductsPage() {
                 </Button>
               </div>
 
-              {/* Sort Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
@@ -393,7 +402,6 @@ export default function ProductsPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Mobile Filters Button */}
               <Button
                 variant="outline"
                 className="lg:hidden gap-2"
@@ -405,7 +413,6 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Products Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -501,7 +508,6 @@ export default function ProductsPage() {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-8">
               <Pagination
@@ -520,7 +526,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Mobile Filters Drawer */}
       {showFilters && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div 
