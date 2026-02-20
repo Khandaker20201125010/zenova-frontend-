@@ -6,7 +6,6 @@ import { useQuery as useReactQuery } from "@tanstack/react-query"
 import { apiClient } from "../lib/api/axios-client"
 import { Product } from "../lib/types"
 
-// Define response types
 export interface ProductsResponse {
   products: Product[]
   total: number
@@ -27,21 +26,14 @@ export interface ApiResponse<T = any> {
   }
 }
 
-// Common queries with proper typing
 export function useProductsQuery(filters?: any) {
   return useReactQuery<ProductsResponse>({
     queryKey: ["products", filters],
     queryFn: async () => {
-      console.log("Sending filters to API:", filters);
-      
-      // Ensure filters are flat, not nested
       const flatFilters = { ...filters };
-      
       const response = await apiClient.get<any>("/products", { 
-        params: flatFilters  // This should send flat params
+        params: flatFilters
       });
-      
-      console.log("API response:", response);
       
       if (Array.isArray(response)) {
         return {
@@ -70,7 +62,6 @@ export function useProductQuery(slug: string) {
     queryFn: async () => {
       const response = await apiClient.get<any>(`/products/slug/${slug}`);
       
-      // Handle different response structures
       if (response && response.data) {
         return response.data;
       }

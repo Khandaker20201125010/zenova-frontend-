@@ -12,20 +12,16 @@ export interface CategoryWithCount extends Category {
 }
 
 export const categoriesApi = {
-  // Get all categories
   getCategories: async (includeProducts = false): Promise<CategoryWithCount[]> => {
     try {
       const response = await apiClient.get<any>('/categories', { 
         params: { includeProducts } 
       })
       
-      
-      // Check if response has data property (API response format)
       if (response && response.data && Array.isArray(response.data)) {
         return response.data
       }
       
-      // If response is already the array (your apiClient might be returning data directly)
       if (Array.isArray(response)) {
         return response
       }
@@ -37,7 +33,6 @@ export const categoriesApi = {
     }
   },
   
-  // Get category tree (hierarchical)
   getCategoryTree: async (): Promise<CategoryWithCount[]> => {
     try {
       const response = await apiClient.get<any>('/categories/tree')
@@ -57,7 +52,6 @@ export const categoriesApi = {
     }
   },
   
-  // Get category by slug
   getCategoryBySlug: async (slug: string): Promise<CategoryWithCount | null> => {
     try {
       const response = await apiClient.get<any>(`/categories/slug/${slug}`)
@@ -77,7 +71,6 @@ export const categoriesApi = {
     }
   },
   
-  // Get products in category
   getCategoryProducts: async (slug: string, page = 1, limit = 12): Promise<any> => {
     try {
       const response = await apiClient.get<any>(`/categories/${slug}/products`, { 
@@ -95,7 +88,6 @@ export const categoriesApi = {
     }
   },
   
-  // Admin routes
   createCategory: async (data: Partial<Category>): Promise<Category | null> => {
     try {
       const response = await apiClient.post<any>('/categories', data)

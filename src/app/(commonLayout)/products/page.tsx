@@ -2,7 +2,7 @@
 // app/products/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -37,53 +37,64 @@ import { Slider } from "@/components/ui/slider"
 import { ProductCard } from "@/src/app/components/products/product-card"
 import { Category } from "@/src/app/lib/types"
 
+// Update tags to use value/label pairs
 const tags = [
-  "Popular",
-  "New",
-  "Featured",
-  "Best Seller",
-  "On Sale",
-  "Limited",
+  { label: "New", value: "new" },
+  { label: "Popular", value: "popular" },
+  { label: "Featured", value: "featured" },
+  { label: "Best Seller", value: "best-seller" },
+  { label: "On Sale", value: "on-sale" },
+  { label: "Limited", value: "limited" },
 ]
 
+// Sort options with proper mapping
 const sortOptions = [
-  { label: "Most Popular", value: "popular" },
-  { label: "Newest", value: "newest" },
-  { label: "Price: Low to High", value: "price_asc" },
-  { label: "Price: High to Low", value: "price_desc" },
-  { label: "Rating", value: "rating" },
+  { label: "Most Popular", value: "popular", sortBy: "rating", sortOrder: "desc" },
+  { label: "Newest", value: "newest", sortBy: "createdAt", sortOrder: "desc" },
+  { label: "Price: Low to High", value: "price_asc", sortBy: "price", sortOrder: "asc" },
+  { label: "Price: High to Low", value: "price_desc", sortBy: "price", sortOrder: "desc" },
+  { label: "Rating", value: "rating", sortBy: "rating", sortOrder: "desc" },
 ]
 
 export default function ProductsPage() {
-  const searchParams = useSearchParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
-  const [selectedCategoryName, setSelectedCategoryName] = useState("All Categories")
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState([0, 1000])
-  const [sortBy, setSortBy] = useState("popular")
-  const [page, setPage] = useState(1)
-  const [, setShowFilters] = useState(false)
+  // --- Local state for input fields ---
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchParams.get("search") || "")
 
+  // --- State derived from URL ---
+  const searchQuery = searchParams.get("search") || ""
+  const selectedCategoryId = searchParams.get("category")
+  const selectedTags = useMemo(() => searchParams.get("tags")?.split(",").filter(Boolean) || [], [searchParams])
+  const minPrice = parseInt(searchParams.get("minPrice") || "0")
+  const maxPrice = parseInt(searchParams.get("maxPrice") || "1000")
+  const priceRange: [number, number] = [minPrice, maxPrice]
+  const sortValue = searchParams.get("sort") || "popular"
+  const page = parseInt(searchParams.get("page") || "1")
+  const inStock = searchParams.get("inStock") === "true"
   const limit = 12
 
-  // Fetch categories from backend
+  // Find the current sort option
+  const currentSortOption = sortOptions.find(opt => opt.value === sortValue) || sortOptions[0]
+
+  // --- UI-only state ---
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories()
-
-
-  // Debug logs
-  // useEffect(() => {
-  //   console.log("Categories data:", categoriesData)
-  //   console.log("Categories loading:", categoriesLoading)
-  //   console.log("Categories error:", categoriesError)
-  // }, [categoriesData, categoriesLoading, categoriesError])
-
   const categories = Array.isArray(categoriesData) ? categoriesData : []
 
-   const { data: productsData, isLoading } = useProductsQuery({
+  // Find selected category name
+  const selectedCategoryName = useMemo(() => {
+    if (!selectedCategoryId) return "All Categories"
+    const category = categories.find(c => c.id === selectedCategoryId)
+    return category?.name || "All Categories"
+  }, [selectedCategoryId, categories])
+
+  // Fetch products with proper sort parameters
+  const { data: productsData, isLoading } = useProductsQuery({
     page,
     limit,
     search: searchQuery || undefined,
@@ -91,103 +102,97 @@ export default function ProductsPage() {
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     minPrice: priceRange[0],
     maxPrice: priceRange[1],
-    sortBy: sortBy === "price_asc" ? "price" :
-      sortBy === "price_desc" ? "price" :
-        sortBy === "rating" ? "rating" : "createdAt",
-    sortOrder: sortBy === "price_desc" ? "desc" : "asc",
+    inStock: inStock || undefined,
+    sortBy: currentSortOption.sortBy,
+    sortOrder: currentSortOption.sortOrder as 'asc' | 'desc',
   })
 
-   const products = productsData?.products || []
+  const products = productsData?.products || []
   const total = productsData?.total || 0
   const totalPages = productsData?.totalPages || 1
 
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams)
-
-    if (searchQuery) params.set("search", searchQuery)
-    else params.delete("search")
-
-    if (selectedCategoryId) params.set("category", selectedCategoryId)
-    else params.delete("category")
-
-    if (selectedTags.length > 0) params.set("tags", selectedTags.join(","))
-    else params.delete("tags")
-
-    params.set("minPrice", priceRange[0].toString())
-    params.set("maxPrice", priceRange[1].toString())
-    params.set("sort", sortBy)
-    params.set("page", page.toString())
-
-    router.push(`/products?${params.toString()}`, { scroll: false })
-  }, [searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy, page, router, searchParams])
-
-// useEffect(() => {
-//   console.log("Current filters:", {
-//     page,
-//     limit,
-//     search: searchQuery || undefined,
-//     category: selectedCategoryId,
-//     categoryName: selectedCategoryName,
-//     tags: selectedTags,
-//     minPrice: priceRange[0],
-//     maxPrice: priceRange[1],
-//     sortBy: sortBy === "price_asc" ? "price" :
-//       sortBy === "price_desc" ? "price" :
-//       sortBy === "rating" ? "rating" : "createdAt",
-//     sortOrder: sortBy === "price_desc" ? "desc" : "asc",
-//   })
-// }, [page, limit, searchQuery, selectedCategoryId, selectedTags, priceRange, sortBy])
-
-  const handleCategorySelect = (category: Category | null) => {
-  if (category) {
-    setSelectedCategoryId(category.id)  // This should be the category ID
-    setSelectedCategoryName(category.name)
-    console.log("Selected category:", { id: category.id, name: category.name })
-  } else {
-    setSelectedCategoryId(null)
-    setSelectedCategoryName("All Categories")
-  }
-  setPage(1)
-}
-
-  const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    )
-    setPage(1)
-  }
-
-  const clearFilters = () => {
-    setSearchQuery("")
-    setSelectedCategoryId(null)
-    setSelectedCategoryName("All Categories")
-    setSelectedTags([])
-    setPriceRange([0, 1000])
-    setSortBy("popular")
-    setPage(1)
-  }
-
-  // Helper function to get category name for display
-  const getCategoryName = (product: any): string => {
-    if (typeof product.category === 'string') {
-      return product.category
+  // --- Helper to build new URL ---
+  const buildUrl = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "") {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    
+    // Always reset to page 1 when filters change (except page itself)
+    if (!('page' in updates)) {
+      params.set('page', '1')
     }
-    return product.category?.name || 'Uncategorized'
+    
+    params.set('limit', limit.toString())
+    const queryString = params.toString()
+    return queryString ? `/products?${queryString}` : "/products"
+  }, [searchParams, limit])
+
+  // --- Event Handlers ---
+  const handleCategorySelect = (category: Category | null) => {
+    const url = buildUrl({ category: category?.id || null })
+    router.push(url, { scroll: false })
+  }
+
+  const handleTagToggle = (tagValue: string) => {
+    const newTags = selectedTags.includes(tagValue)
+      ? selectedTags.filter(t => t !== tagValue)
+      : [...selectedTags, tagValue]
+    const url = buildUrl({ tags: newTags.length ? newTags.join(',') : null })
+    router.push(url, { scroll: false })
   }
 
   const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault()
-  if (searchQuery.trim()) {
-    setSearchQuery(searchQuery.trim())
-    setPage(1)
+    e.preventDefault()
+    const url = buildUrl({ search: localSearchQuery || null })
+    router.push(url, { scroll: false })
   }
-}
+
+  const handlePriceChange = (value: number[]) => {
+    const url = buildUrl({ 
+      minPrice: value[0].toString(), 
+      maxPrice: value[1].toString() 
+    })
+    router.push(url, { scroll: false })
+  }
+
+  const handleSortChange = (value: string) => {
+    const url = buildUrl({ sort: value })
+    router.push(url, { scroll: false })
+  }
+
+  const handlePageChange = (newPage: number) => {
+    const url = buildUrl({ page: newPage.toString() })
+    router.push(url, { scroll: false })
+  }
+
+  const clearFilters = () => {
+    setLocalSearchQuery("")
+    const url = buildUrl({
+      search: null,
+      category: null,
+      tags: null,
+      minPrice: '0',
+      maxPrice: '1000',
+      sort: 'popular',
+      inStock: null,
+      page: '1'
+    })
+    router.push(url, { scroll: false })
+  }
+
+  const handleInStockChange = (checked: boolean) => {
+    const url = buildUrl({ inStock: checked ? 'true' : null })
+    router.push(url, { scroll: false })
+  }
 
   return (
     <div className="container py-8">
-      {/* Hero Section */}
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold mb-4">Our Products</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -214,18 +219,20 @@ export default function ProductsPage() {
 
               {/* Search */}
               <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search products..."
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+                <form onSubmit={handleSearch}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search products..."
+                      className="pl-10"
+                      value={localSearchQuery}
+                      onChange={(e) => setLocalSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </form>
               </div>
 
-              {/* Categories from Backend */}
+              {/* Categories */}
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Categories</h4>
                 {categoriesLoading ? (
@@ -234,14 +241,15 @@ export default function ProductsPage() {
                       <Skeleton key={i} className="h-8 w-full" />
                     ))}
                   </div>
-                ) : categories.length > 0 ? (
+                ) : (
                   <div className="space-y-2">
                     <button
                       onClick={() => handleCategorySelect(null)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${!selectedCategoryId
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        !selectedCategoryId
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent"
-                        }`}
+                      }`}
                     >
                       All Categories
                     </button>
@@ -249,10 +257,11 @@ export default function ProductsPage() {
                       <button
                         key={category.id}
                         onClick={() => handleCategorySelect(category)}
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selectedCategoryId === category.id
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                          selectedCategoryId === category.id
                             ? "bg-primary text-primary-foreground"
                             : "hover:bg-accent"
-                          }`}
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <span>{category.name}</span>
@@ -265,10 +274,6 @@ export default function ProductsPage() {
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground py-2">
-                    No categories found
-                  </div>
                 )}
               </div>
 
@@ -280,7 +285,8 @@ export default function ProductsPage() {
                 <div className="space-y-4">
                   <Slider
                     value={priceRange}
-                    onValueChange={setPriceRange}
+                    onValueChange={handlePriceChange}
+                    min={0}
                     max={1000}
                     step={10}
                     className="w-full"
@@ -300,12 +306,12 @@ export default function ProductsPage() {
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
                     <Badge
-                      key={tag}
-                      variant={selectedTags.includes(tag) ? "default" : "outline"}
+                      key={tag.value}
+                      variant={selectedTags.includes(tag.value) ? "default" : "outline"}
                       className="cursor-pointer"
-                      onClick={() => handleTagToggle(tag)}
+                      onClick={() => handleTagToggle(tag.value)}
                     >
-                      {tag}
+                      {tag.label}
                     </Badge>
                   ))}
                 </div>
@@ -315,7 +321,11 @@ export default function ProductsPage() {
 
               {/* In Stock */}
               <div className="flex items-center space-x-2">
-                <Checkbox id="inStock" />
+                <Checkbox 
+                  id="inStock" 
+                  checked={inStock}
+                  onCheckedChange={handleInStockChange}
+                />
                 <label
                   htmlFor="inStock"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -365,12 +375,12 @@ export default function ProductsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
-                    Sort by
+                    Sort by: {sortOptions.find(opt => opt.value === sortValue)?.label || "Popular"}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuRadioGroup value={sortBy} onValueChange={setSortBy}>
+                  <DropdownMenuRadioGroup value={sortValue} onValueChange={handleSortChange}>
                     {sortOptions.map((option) => (
                       <DropdownMenuRadioItem
                         key={option.value}
@@ -395,7 +405,7 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Products Grid/List */}
+          {/* Products Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -430,90 +440,74 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {products.map((product: any, index: number) => {
-                const categoryName = getCategoryName(product)
-                const stock = product.stock || 0
-
-                return (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex gap-4">
-                          {/* Product Image */}
-                          <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                            <Image
-                              fill
-                              src={product.images?.[0] || "/placeholder-product.jpg"}
-                              alt={product.name}
-                              className="h-full w-full object-cover"
-                            />
+              {products.map((product: any, index: number) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex gap-4">
+                        <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <Image
+                            fill
+                            src={product.images?.[0] || "/placeholder-product.jpg"}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg mb-1">
+                                {product.name}
+                              </h3>
+                              <p className="text-muted-foreground line-clamp-2 mb-3">
+                                {product.description}
+                              </p>
+                            </div>
+                            <div className="text-2xl font-bold">
+                              ${(product.discountedPrice || product.price).toFixed(2)}
+                            </div>
                           </div>
-
-                          {/* Product Info */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h3 className="font-semibold text-lg mb-1">
-                                  {product.name}
-                                </h3>
-                                <p className="text-muted-foreground line-clamp-2 mb-3">
-                                  {product.description}
-                                </p>
-                              </div>
-                              <div className="text-2xl font-bold">
-                                ${(product.discountedPrice || product.price).toFixed(2)}
-                              </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant="outline">
+                              {product.category?.name || 'Uncategorized'}
+                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm">{product.rating || 0}</span>
                             </div>
-
-                            <div className="flex items-center gap-4">
-                              <Badge variant="outline">
-                                {categoryName}
-                              </Badge>
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-sm">{product.rating || 0}</span>
-                                <span className="text-sm text-muted-foreground">
-                                  ({product.reviewCount || 0})
-                                </span>
-                              </div>
-                              {stock > 0 ? (
-                                <Badge className="bg-green-500">In Stock</Badge>
-                              ) : (
-                                <Badge variant="destructive">Out of Stock</Badge>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-4">
-                              <Button size="sm">Add to Cart</Button>
-                              <Button size="sm" variant="outline">
-                                View Details
-                              </Button>
-                              <Button size="sm" variant="ghost">
-                                Add to Wishlist
-                              </Button>
-                            </div>
+                            {(product.stock || 0) > 0 ? (
+                              <Badge className="bg-green-500">In Stock</Badge>
+                            ) : (
+                              <Badge variant="destructive">Out of Stock</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-4">
+                            <Button size="sm">Add to Cart</Button>
+                            <Button size="sm" variant="outline">
+                              View Details
+                            </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )
-              })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           )}
 
           {/* Pagination */}
-          {products.length > 0 && (
+          {totalPages > 1 && (
             <div className="mt-8">
               <Pagination
                 currentPage={page}
-                totalPages={Math.ceil(total / limit)}
-                onPageChange={setPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
               />
               <PaginationInfo
                 currentPage={page}
@@ -525,6 +519,28 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+
+      {/* Mobile Filters Drawer */}
+      {showFilters && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowFilters(false)}
+          />
+          <div className="absolute right-0 top-0 h-full w-[300px] bg-background p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold">Filters</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFilters(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
