@@ -11,7 +11,7 @@ import { Product } from "../../lib/types"
 import { useEffect } from "react"
 
 export default function ProductsSection() {
-  const { data: response, isLoading, error } = useProductsQuery({ limit: 8, isFeatured: true })
+  const { data: response, isLoading, error } = useProductsQuery({ limit: 4, isFeatured: true })
   
  
   
@@ -38,12 +38,7 @@ export default function ProductsSection() {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Discover our most popular products trusted by thousands of businesses
           </p>
-          <Button variant="outline" asChild>
-            <Link href="/products">
-              View All Products
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+        
         </motion.div>
 
         {isLoading ? (
