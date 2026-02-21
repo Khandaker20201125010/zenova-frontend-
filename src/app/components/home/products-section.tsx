@@ -11,15 +11,12 @@ import { Product } from "../../lib/types"
 import { useEffect } from "react"
 
 export default function ProductsSection() {
-  const { data: products, isLoading, error } = useProductsQuery({ limit: 8, isFeatured: true })
+  const { data: response, isLoading, error } = useProductsQuery({ limit: 8, isFeatured: true })
   
-  // Log the response to see what's coming from the API
-  useEffect(() => {
-    console.log("Products received:", products);
-    console.log("Error:", error);
-  }, [products, error]);
+ 
   
-  // Ensure products is an array
+  // Extract products from the response
+  const products = response?.products || [];
   const productArray = Array.isArray(products) ? products : [];
 
   return (
@@ -75,7 +72,7 @@ export default function ProductsSection() {
           </div>
         ) : (
           <div className="text-center text-muted-foreground py-8">
-            No products found.
+            No featured products found.
           </div>
         )}
 
