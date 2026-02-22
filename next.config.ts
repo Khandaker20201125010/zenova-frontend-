@@ -27,6 +27,11 @@ const nextConfig: ExtendedNextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'example.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
         pathname: '/**',
       },

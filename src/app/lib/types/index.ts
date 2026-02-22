@@ -192,20 +192,26 @@ export interface BlogPost {
   title: string
   slug: string
   content: string
-  excerpt: string
-  coverImage: string
+  excerpt: string | null
+  coverImage: string | null
   authorId: string
-  author?: User
-  category: string
+  author?: {
+    id: string
+    name: string
+    avatar: string | null
+    position?: string | null
+    bio?: string | null
+  }
+  category: string | null
   tags: string[]
-  published: boolean
-  featured: boolean
+  isPublished: boolean
+  publishedAt: string | null
   views: number
-  readingTime: number
-  seo?: SEO
+  seoTitle: string | null
+  seoDescription: string | null
+  seoKeywords: string[]
   createdAt: string
   updatedAt: string
-  publishedAt?: string
 }
 
 export interface Comment {

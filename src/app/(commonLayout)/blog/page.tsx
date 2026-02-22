@@ -11,10 +11,10 @@ import { Button } from "@/src/app/components/ui/button"
 import { Card, CardContent } from "@/src/app/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/app/components/ui/select"
 import { Pagination } from "@/src/app/components/shared/pagination"
-import { blogApi } from "../../lib/api/blog"
 import Link from "next/link"
 import { BlogCard } from "../../components/blog/blog-card"
 import { BlogSkeleton } from "../../components/blog/blog-skeleton"
+import { blogsApi } from "../../lib/api/blog"
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<any[]>([])
@@ -41,22 +41,40 @@ export default function BlogPage() {
       if (search) filters.search = search
       if (category !== "all") filters.category = category
       if (sortBy === "popular") filters.sortBy = "views"
+      if (sortBy === "oldest") filters.sortOrder = "asc"
       
-      const postsData = await blogApi.getPosts(filters)
-      setPosts(postsData.posts || [])
-      setTotalPages(postsData.totalPages || 1)
+      const postsResponse = await blogsApi.getPosts(filters)
+      
+      // Handle different response structures
+      if (postsResponse.posts) {
+        setPosts(postsResponse.posts || [])
+        setTotalPages(postsResponse.totalPages || 1)
+      } else if (Array.isArray(postsResponse)) {
+        setPosts(postsResponse)
+        setTotalPages(1)
+      } else {
+        setPosts([])
+      }
 
       // Fetch featured posts
-      const featured = await blogApi.getFeaturedPosts()
-      setFeaturedPosts(featured || [])
+      try {
+        const featured = await blogsApi.getFeaturedPosts()
+        setFeaturedPosts(Array.isArray(featured) ? featured : [])
+      } catch (error) {
+        console.error("Failed to fetch featured posts:", error)
+      }
 
       // Fetch categories and tags
-      const [cats, tgs] = await Promise.all([
-        blogApi.getCategories(),
-        blogApi.getTags(),
-      ])
-      setCategories(cats || [])
-      setTags(tgs || [])
+      try {
+        const [cats, tgs] = await Promise.all([
+          blogsApi.getCategories(),
+          blogsApi.getTags(),
+        ])
+        setCategories(Array.isArray(cats) ? cats : [])
+        setTags(Array.isArray(tgs) ? tgs : [])
+      } catch (error) {
+        console.error("Failed to fetch categories/tags:", error)
+      }
     } catch (error) {
       console.error("Failed to fetch blog data:", error)
     } finally {
@@ -160,21 +178,23 @@ export default function BlogPage() {
           </div>
 
           {/* Tags */}
-          <div className="mt-6">
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground mr-2">Popular tags:</span>
-              {tags.slice(0, 10).map((tag) => (
-                <Button
-                  key={tag}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearch(tag)}
-                >
-                  #{tag}
-                </Button>
-              ))}
+          {tags.length > 0 && (
+            <div className="mt-6">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm text-muted-foreground mr-2">Popular tags:</span>
+                {tags.slice(0, 10).map((tag) => (
+                  <Button
+                    key={tag}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearch(tag)}
+                  >
+                    #{tag}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
