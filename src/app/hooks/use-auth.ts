@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// hooks/use-auth.ts
 "use client"
 
 import { useSession, signIn, signOut } from "next-auth/react"
@@ -7,15 +6,17 @@ import { useRouter } from "next/navigation"
 import { useCallback } from "react"
 import { useToast } from "./use-toast"
 import { authApi } from "../lib/api/auth"
+import { useAuthStore } from "../store/auth-store"
 
 export function useAuth() {
   const { data: session, status, update } = useSession()
   const router = useRouter()
   const { toast } = useToast()
+  const { user: storeUser } = useAuthStore()
 
   const isLoading = status === "loading"
   const isAuthenticated = status === "authenticated"
-  const user = session?.user
+  const user = storeUser || session?.user
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -40,7 +41,7 @@ export function useAuth() {
         toast({
           title: "Login failed",
           description: error.message || "Invalid credentials",
-          variant: "error",
+          variant: "destructive",
         })
         return { success: false, error: error.message }
       }
@@ -58,7 +59,6 @@ export function useAuth() {
           description: "Please check your email to verify your account",
         })
 
-        // Auto login after registration
         await signIn("credentials", {
           email: data.email,
           password: data.password,
@@ -70,7 +70,7 @@ export function useAuth() {
         toast({
           title: "Registration failed",
           description: error.message || "An error occurred",
-          variant: "error",
+          variant: "destructive",
         })
         return { success: false, error: error.message }
       }
@@ -93,7 +93,7 @@ export function useAuth() {
       toast({
         title: "Logout failed",
         description: error.message || "An error occurred",
-        variant: "error",
+        variant: "destructive",
       })
     }
   }, [router, toast])
@@ -108,24 +108,23 @@ export function useAuth() {
 
   const hasRole = useCallback(
     (role: string) => {
-      return (user as any)?.role === role
+      return user?.role === role
     },
     [user]
   )
 
   const hasAnyRole = useCallback(
     (roles: string[]) => {
-      return roles.includes((user as any)?.role || "")
+      return roles.includes(user?.role || "")
     },
     [user]
   )
 
-  const isAdmin = (user as any)?.role === "ADMIN"
-  const isManager = (user as any)?.role === "MANAGER"
-  const isUser = (user as any)?.role === "USER"
+  const isAdmin = user?.role === "ADMIN"
+  const isManager = user?.role === "MANAGER"
+  const isUser = user?.role === "USER"
 
   return {
-    // State
     session,
     user,
     isLoading,
@@ -133,17 +132,13 @@ export function useAuth() {
     isAdmin,
     isManager,
     isUser,
-    
-    // Actions
     login,
     register,
     logout,
     refreshSession,
     hasRole,
     hasAnyRole,
-    
-    // Helpers
     getToken: () => session?.accessToken,
-    getUserId: () => (user as any)?.id,
+    getUserId: () => user?.id,
   }
 }

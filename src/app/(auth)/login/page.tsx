@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
@@ -12,7 +12,6 @@ import {
   EyeOff,
   Loader2,
   ArrowRight,
-  Github,
   Facebook,
   Chrome
 } from "lucide-react"
@@ -27,6 +26,7 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/"
+  const error = searchParams.get("error")
   const { toast } = useToast()
 
   const [email, setEmail] = useState("")
@@ -34,6 +34,41 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Authentication Error",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      })
+    }
+  }, [error, toast])
+
+  const getErrorMessage = (error: string) => {
+    switch (error) {
+      case "OAuthSignin":
+        return "Error in building the authorization URL"
+      case "OAuthCallback":
+        return "Error in handling the response from OAuth provider"
+      case "OAuthCreateAccount":
+        return "Could not create OAuth user"
+      case "EmailCreateAccount":
+        return "Could not create email user"
+      case "Callback":
+        return "Error in the OAuth callback handler"
+      case "OAuthAccountNotLinked":
+        return "Email already exists with different provider"
+      case "EmailSignin":
+        return "Check your email address"
+      case "CredentialsSignin":
+        return "Invalid credentials"
+      case "RefreshAccessTokenError":
+        return "Your session has expired. Please sign in again."
+      default:
+        return "An error occurred during authentication"
+    }
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -67,25 +102,24 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl,
       })
 
       if (result?.error) {
         toast({
           title: "Login Failed",
-          description: "Invalid email or password",
+          description: result.error,
           variant: "destructive",
         })
+      } else if (result?.url) {
+        router.push(result.url)
       } else {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        })
         router.push(callbackUrl)
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -98,9 +132,22 @@ export default function LoginPage() {
     setPassword("demo123")
   }
 
-  const handleSocialLogin = (provider: string) => {
+  const handleSocialLogin = async (provider: string) => {
     setIsLoading(true)
-    signIn(provider, { callbackUrl })
+    try {
+      await signIn(provider, { 
+        callbackUrl: '/',
+        redirect: true,
+      })
+    } catch (error) {
+      console.error("Social login error:", error)
+      setIsLoading(false)
+      toast({
+        title: "Login Failed",
+        description: `Failed to login with ${provider}`,
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -123,7 +170,6 @@ export default function LoginPage() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -136,6 +182,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
                 {errors.email && (
@@ -143,12 +190,11 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
                   <Link
-                    href="/reset-password"
+                    href="/forgot-password"
                     className="text-sm text-brand hover:underline"
                   >
                     Forgot password?
@@ -164,6 +210,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
@@ -182,7 +229,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Demo Login Button */}
               <Button
                 type="button"
                 variant="outline"
@@ -193,7 +239,6 @@ export default function LoginPage() {
                 Fill Demo Credentials
               </Button>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full gap-2"
@@ -213,7 +258,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Social Login */}
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -273,16 +317,6 @@ export default function LoginPage() {
             </div>
           </CardFooter>
         </Card>
-
-        {/* Additional Info */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Need help?{" "}
-            <Link href="/contact" className="text-brand hover:underline">
-              Contact Support
-            </Link>
-          </p>
-        </div>
       </motion.div>
     </div>
   )

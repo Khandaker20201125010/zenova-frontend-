@@ -1,18 +1,14 @@
-// store/auth-store.ts
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { User } from "../lib/types"
-
+import { User, UserRole } from "../lib/types"
 
 interface AuthStore {
-  // State
   user: User | null
   accessToken: string | null
   refreshToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
   
-  // Actions
   setUser: (user: User | null) => void
   setTokens: (accessToken: string, refreshToken: string) => void
   setAccessToken: (token: string) => void
@@ -20,22 +16,19 @@ interface AuthStore {
   setLoading: (loading: boolean) => void
   logout: () => void
   
-  // Computed
-  hasRole: (role: string) => boolean
-  hasAnyRole: (roles: string[]) => boolean
+  hasRole: (role: UserRole) => boolean
+  hasAnyRole: (roles: UserRole[]) => boolean
 }
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      // Initial state
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       
-      // Actions
       setUser: (user) => {
         set({ user, isAuthenticated: !!user })
       },
@@ -66,7 +59,6 @@ export const useAuthStore = create<AuthStore>()(
         })
       },
       
-      // Computed
       hasRole: (role) => {
         const { user } = get()
         return user?.role === role
@@ -74,12 +66,11 @@ export const useAuthStore = create<AuthStore>()(
       
       hasAnyRole: (roles) => {
         const { user } = get()
-        return roles.includes(user?.role || "")
+        return user ? roles.includes(user.role) : false
       },
     }),
     {
       name: "auth-storage",
-      // Only persist certain fields
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

@@ -1,19 +1,51 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
+
 import Link from "next/link";
+import { signOut } from "next-auth/react"; // Import signOut
 import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar";
 import { Button } from "../../../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../ui/dropdown-menu";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "../../../ui/dropdown-menu";
 import { BarChart3, Heart, LogOut, Settings, ShoppingBag, User } from "lucide-react";
 
 export function UserMenu({ session }: { session: any }) {
+  // Get avatar from either image or avatar field
+  const avatarSrc = session.user?.avatar || session.user?.image;
+  const userInitials = session.user?.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase() || "U";
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: true 
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={session.user?.image} alt={session.user?.name} />
+            <AvatarImage 
+              src={avatarSrc} 
+              alt={session.user?.name || "User"} 
+            />
             <AvatarFallback>
-              {session.user?.name?.split(" ").map(n => n[0]).join("")}
+              {userInitials}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -31,25 +63,25 @@ export function UserMenu({ session }: { session: any }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard">
+          <Link href="/dashboard" className="flex items-center">
             <BarChart3 className="mr-2 h-4 w-4" />
             Dashboard
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/profile">
+          <Link href="/profile" className="flex items-center">
             <User className="mr-2 h-4 w-4" />
             Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/favorites">
+          <Link href="/favorites" className="flex items-center">
             <Heart className="mr-2 h-4 w-4" />
             Favorites
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/orders">
+          <Link href="/orders" className="flex items-center">
             <ShoppingBag className="mr-2 h-4 w-4" />
             Orders
           </Link>
@@ -58,7 +90,7 @@ export function UserMenu({ session }: { session: any }) {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/admin">
+              <Link href="/admin" className="flex items-center">
                 <Settings className="mr-2 h-4 w-4" />
                 Admin Panel
               </Link>
@@ -66,11 +98,11 @@ export function UserMenu({ session }: { session: any }) {
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
           <LogOut className="mr-2 h-4 w-4" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

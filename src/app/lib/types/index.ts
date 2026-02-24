@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/types/index.ts
+export type UserRole = "USER" | "ADMIN" | "MANAGER";
+
 export interface User {
   id: string
   email: string
   name: string
   avatar?: string
-  role: "USER" | "ADMIN" | "MANAGER"
+  role: UserRole  
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   emailVerified: boolean
   phone?: string
@@ -47,10 +49,10 @@ export interface Product {
   specifications?: Record<string, any>;
   rating: number;
   reviewCount: number;
-  stock: number;  // This is what your backend uses (not inventory)
+  stock: number;
   isFeatured: boolean;
   isActive?: boolean;
-  isNew?: boolean; // For UI only
+  isNew?: boolean;
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string[];

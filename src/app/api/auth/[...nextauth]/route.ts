@@ -1,11 +1,53 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
+import { UserRole } from "@/src/app/lib/types";
+
+
+async function refreshAccessToken(token: any) {
+  try {
+    console.log("Refreshing access token...");
+    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refreshToken: token.refreshToken,
+        }),
+      }
+    );
+
+    const data = await response.json();
+    console.log("Refresh token response:", data);
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to refresh token");
+    }
+
+    return {
+      ...token,
+      accessToken: data.data?.token || data.data?.accessToken,
+      refreshToken: data.data?.refreshToken || token.refreshToken,
+      accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+      error: undefined,
+    };
+  } catch (error) {
+    console.error("Error refreshing access token:", error);
+    return {
+      ...token,
+      error: "RefreshAccessTokenError",
+    };
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Google Provider
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
@@ -18,7 +60,6 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    // Credentials Provider (Email/Password)
     CredentialsProvider({
       id: "credentials",
       name: "credentials",
@@ -32,7 +73,6 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Call your backend login API
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
             {
@@ -48,21 +88,20 @@ export const authOptions: NextAuthOptions = {
           );
 
           const data = await res.json();
+          console.log("Login response:", data);
 
           if (res.ok && data.success) {
-            // Return user object with token
             return {
               id: data.data.user.id,
               email: data.data.user.email,
               name: data.data.user.name,
-              role: data.data.user.role,
-              avatar: data.data.user.avatar,
+              role: data.data.user.role as UserRole,
+              avatar: data.data.user.avatar || null,
               accessToken: data.data.token,
               refreshToken: data.data.refreshToken,
             };
           }
 
-          // Handle specific error messages from backend
           throw new Error(data.message || "Invalid credentials");
         } catch (error) {
           console.error("Authorize error:", error);
@@ -72,24 +111,12 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  // Callbacks to handle JWT and Session
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign in
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.role = user.role;
-        token.avatar = user.avatar;
-        token.accessToken = user.accessToken;
-        token.refreshToken = user.refreshToken;
-      }
-
-      // For Google OAuth, you might need to create/login user in your backend
+    async signIn({ user, account, profile }) {
+      console.log("SignIn callback:", { user, account, profile });
+      
       if (account?.provider === "google") {
         try {
-          // Call your backend social login API
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/auth/social-login`,
             {
@@ -98,74 +125,104 @@ export const authOptions: NextAuthOptions = {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                email: token.email,
-                name: token.name,
+                email: user.email,
+                name: user.name,
                 googleId: account.providerAccountId,
-                avatar: token.picture,
+                avatar: user.image,
               }),
             },
           );
 
           const data = await res.json();
+          console.log("Social login response:", data);
 
           if (res.ok && data.success) {
-            token.id = data.data.user.id;
-            token.role = data.data.user.role;
-            token.accessToken = data.data.token;
-            token.refreshToken = data.data.refreshToken;
+            user.id = data.data.user.id;
+            user.role = data.data.user.role as UserRole;
+            user.accessToken = data.data.token;
+            user.refreshToken = data.data.refreshToken;
+            
+            return true;
           }
+          return false;
         } catch (error) {
-          console.error("Google social login error:", error);
+          console.error("Google signIn error:", error);
+          return false;
         }
       }
+      return true;
+    },
 
-      return token;
+    async jwt({ token, user, account }) {
+      // Initial sign in
+      if (account && user) {
+        console.log("JWT callback - initial sign in:", { user, account });
+        
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar,
+          accessToken: user.accessToken,
+          refreshToken: user.refreshToken,
+          accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          error: undefined,
+        };
+      }
+
+      // Return previous token if the access token has not expired yet
+      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+        return token;
+      }
+
+      // Access token has expired, try to update it
+      return refreshAccessToken(token);
     },
 
     async session({ session, token }) {
-      // Add custom properties to session
+      console.log("Session callback:", { token });
+      
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.avatar = token.avatar as string | null | undefined;
-        session.user.accessToken = token.accessToken as string;
-        session.user.refreshToken = token.refreshToken as string;
+        session.user.id = token.id;
+        session.user.email = token.email || '';
+        session.user.name = token.name || '';
+        session.user.role = token.role;
+        session.user.avatar = token.avatar;
+        session.user.accessToken = token.accessToken;
+        session.user.refreshToken = token.refreshToken;
       }
+      
+      session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
+      session.error = token.error;
+      
       return session;
     },
 
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
     },
   },
 
-  // Custom pages
   pages: {
     signIn: "/login",
     error: "/auth/error",
     verifyRequest: "/auth/verify-request",
-    // Note: 'signUp' is not a valid option in NextAuth pages
-    // Use the signIn page with a register link instead
   },
 
-  // Session configuration
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
-  // JWT configuration
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
-  // Enable debug messages in development
   debug: process.env.NODE_ENV === "development",
-
   secret: process.env.NEXTAUTH_SECRET,
 };
 
