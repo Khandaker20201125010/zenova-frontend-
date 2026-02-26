@@ -7,7 +7,7 @@ import { ThemeProvider } from "./lib/providers/theme-provider"
 import { QueryProvider } from "./lib/providers/query-provider"
 import { AuthProvider } from "./lib/providers/auth-provider"
 import { ConfettiProvider } from "./components/shared/confetti-provider"
-import { SessionDebug } from "./components/SessionDebug/SessionDebug"
+// import { SessionDebug } from "./components/SessionDebug/SessionDebug"
 
 
 const inter = Inter({ subsets: ["latin"] })
@@ -42,7 +42,7 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AuthProvider>
-               <SessionDebug />
+               {/* <SessionDebug /> */}
               <ConfettiProvider>
                 <div className="min-h-screen flex flex-col">
                   <main className="flex-1">

@@ -2,9 +2,10 @@
 // app/(auth)/register/page.tsx
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { signIn } from "next-auth/react"
 import { motion } from "framer-motion"
 import { 
   Mail, 
@@ -14,7 +15,6 @@ import {
   EyeOff,
   Loader2,
   ArrowRight,
-  Github,
   Facebook,
   Chrome,
   CheckCircle
@@ -29,10 +29,12 @@ import { Button } from "../../components/ui/button"
 import { useAuth } from "../../hooks/use-auth"
 import { useToast } from "../../hooks/use-toast"
 import { validationSchemas } from "../../lib/utils/validators"
-import { z } from "zod"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
+  const error = searchParams.get("error")
   const { toast } = useToast()
   const { register } = useAuth()
 
@@ -51,6 +53,106 @@ export default function RegisterPage() {
     score: 0,
     feedback: [] as string[],
   })
+
+  useEffect(() => {
+    if (error) {
+      console.error("OAuth Error from URL:", error)
+      toast({
+        title: "Authentication Error",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      })
+    }
+  }, [error, toast])
+
+  const getErrorMessage = (error: string) => {
+    switch (error) {
+      case "OAuthSignin":
+        return "Error in building the authorization URL"
+      case "OAuthCallback":
+        return "Error in handling the response from OAuth provider"
+      case "OAuthCreateAccount":
+        return "Could not create OAuth user"
+      case "EmailCreateAccount":
+        return "Could not create email user"
+      case "Callback":
+        return "Error in the OAuth callback handler"
+      case "OAuthAccountNotLinked":
+        return "Email already exists with different provider"
+      case "EmailSignin":
+        return "Check your email address"
+      case "CredentialsSignin":
+        return "Invalid credentials"
+      case "RefreshAccessTokenError":
+        return "Your session has expired. Please sign in again."
+      default:
+        return "An error occurred during authentication"
+    }
+  }
+
+  const handleSocialLogin = async (provider: string) => {
+    // Check terms agreement before social login
+    if (!formData.agreeToTerms) {
+      toast({
+        title: "Terms Required",
+        description: "You must agree to the terms and conditions to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    console.log(`🔵 Attempting to sign in with ${provider} from register page...`)
+    
+    try {
+      // Try with redirect false first to see what's happening
+      const result = await signIn(provider, { 
+        callbackUrl: '/',
+        redirect: false, // Set to false to see the result
+      })
+      
+      console.log("📡 SignIn result:", result)
+      
+      if (result?.error) {
+        console.error("❌ SignIn error:", result.error)
+        toast({
+          title: "Login Failed",
+          description: result.error,
+          variant: "destructive",
+        })
+        setIsLoading(false)
+      } else if (result?.url) {
+        console.log("✅ SignIn successful, redirecting to:", result.url)
+        router.push(result.url)
+      } else {
+        console.log("⚠️ No URL in result, pushing to callbackUrl")
+        router.push(callbackUrl)
+      }
+    } catch (error) {
+      console.error("💥 Social login exception:", error)
+      setIsLoading(false)
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : `Failed to login with ${provider}`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Test function to check if signIn is available
+  const testSignIn = async () => {
+    console.log("🔍 Testing signIn function:", typeof signIn)
+    if (typeof signIn === 'function') {
+      console.log("✅ signIn is available")
+    } else {
+      console.error("❌ signIn is not available")
+    }
+  }
+
+  // Call test on mount
+  useEffect(() => {
+    testSignIn()
+  }, [])
 
   const validateForm = () => {
     const result = validationSchemas.register.safeParse(formData)
@@ -121,7 +223,7 @@ export default function RegisterPage() {
       toast({
         title: "Registration Failed",
         description: error.message || "An error occurred",
-        variant: "error",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -135,7 +237,6 @@ export default function RegisterPage() {
       checkPasswordStrength(value as string)
     }
     
-    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }))
     }
@@ -161,7 +262,7 @@ export default function RegisterPage() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
+              {/* Form fields - same as before */}
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -180,7 +281,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -200,7 +300,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -227,7 +326,6 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 
-                {/* Password Strength */}
                 {formData.password && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -269,7 +367,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -300,7 +397,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Terms Agreement */}
               <div className="flex items-start space-x-2">
                 <Checkbox
                   id="terms"
@@ -325,7 +421,6 @@ export default function RegisterPage() {
                 <p className="text-sm text-destructive">{errors.agreeToTerms}</p>
               )}
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full gap-2"
@@ -345,7 +440,6 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            {/* Social Login */}
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -362,6 +456,7 @@ export default function RegisterPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  onClick={() => handleSocialLogin("google")}
                   disabled={isLoading}
                   className="gap-2"
                 >
@@ -371,6 +466,7 @@ export default function RegisterPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  onClick={() => handleSocialLogin("facebook")}
                   disabled={isLoading}
                   className="gap-2"
                 >

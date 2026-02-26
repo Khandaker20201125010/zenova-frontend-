@@ -1,39 +1,66 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// components/ui/user-menu.tsx
 "use client"
 
-import Link from "next/link";
-import { signOut } from "next-auth/react"; // Import signOut
-import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar";
-import { Button } from "../../../ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "../../../ui/dropdown-menu";
-import { BarChart3, Heart, LogOut, Settings, ShoppingBag, User } from "lucide-react";
+import { useSession, signOut } from "next-auth/react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
+import { Button } from "../../../ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../../ui/dropdown-menu"
+import { BarChart3, Heart, LogOut, Settings, ShoppingBag, User, Loader2 } from "lucide-react"
+import { useToast } from "@/src/app/hooks/use-toast"
 
-export function UserMenu({ session }: { session: any }) {
-  // Get avatar from either image or avatar field
-  const avatarSrc = session.user?.avatar || session.user?.image;
-  const userInitials = session.user?.name
-    ?.split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase() || "U";
+
+export function UserMenu() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const { toast } = useToast()
 
   const handleLogout = async () => {
     try {
       await signOut({ 
-        callbackUrl: '/login',
-        redirect: true 
-      });
+        redirect: false,
+        callbackUrl: "/login"
+      })
+      router.push("/login")
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      })
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Logout error:", error)
     }
-  };
+  }
+
+  if (status === "loading") {
+    return (
+      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </Button>
+    )
+  }
+
+  if (!session?.user) {
+    return (
+      <Button asChild variant="default" size="sm">
+        <Link href="/login">Sign In</Link>
+      </Button>
+    )
+  }
+
+  const avatarSrc = session.user.avatar || session.user.image
+  const initials = session.user.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase() || "U"
 
   return (
     <DropdownMenu>
@@ -42,23 +69,21 @@ export function UserMenu({ session }: { session: any }) {
           <Avatar className="h-8 w-8">
             <AvatarImage 
               src={avatarSrc} 
-              alt={session.user?.name || "User"} 
+              alt={session.user.name || ""}
+              onError={(e) => {
+                // If image fails to load, hide it and show fallback
+                e.currentTarget.style.display = 'none'
+              }}
             />
-            <AvatarFallback>
-              {userInitials}
-            </AvatarFallback>
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {session.user?.name}
-            </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {session.user?.email}
-            </p>
+            <p className="text-sm font-medium">{session.user.name}</p>
+            <p className="text-xs text-muted-foreground">{session.user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -86,7 +111,7 @@ export function UserMenu({ session }: { session: any }) {
             Orders
           </Link>
         </DropdownMenuItem>
-        {session.user?.role === "ADMIN" && (
+        {session.user.role === "ADMIN" && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -98,11 +123,14 @@ export function UserMenu({ session }: { session: any }) {
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+        <DropdownMenuItem 
+          onClick={handleLogout}
+          className="text-red-600 focus:text-red-600 cursor-pointer"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
