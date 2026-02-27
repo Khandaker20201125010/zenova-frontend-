@@ -3,26 +3,22 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
-  Menu, 
-  X, 
-  ShoppingCart, 
-  Bell, 
-  Search,
-  User,
-  Settings,
-  LogOut,
   Home,
   Package,
   FileText,
   BarChart3,
   Users,
   CreditCard,
-  HelpCircle
+  HelpCircle,
+  Settings,
+  User,
+  ShoppingCart,
+  Search
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useCartStore } from "@/src/app/store/cart-store"
@@ -30,12 +26,11 @@ import { Input } from "../../../ui/input"
 import { MobileNav } from "./mobile-nav"
 import { DesktopNav } from "./desktop-nav"
 
-
 export function Navbar() {
   const { data: session } = useSession()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const cartItems = useCartStore((state : any) => state.getItemCount())
+  const cartItems = useCartStore((state: any) => state.getItemCount())
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -60,7 +55,6 @@ export function Navbar() {
   const userRoutes = [
     ...publicRoutes,
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
-    { href: "/cart", label: "Cart", icon: ShoppingCart },
     { href: "/profile", label: "Profile", icon: User },
   ]
 

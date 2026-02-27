@@ -17,7 +17,8 @@ import {
   ArrowRight,
   Facebook,
   Chrome,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from "lucide-react"
 
 import { Input } from "../../components/ui/input"
@@ -26,9 +27,23 @@ import { Label } from "../../components/ui/label"
 import { Separator } from "../../components/ui/separator"
 import { Checkbox } from "../../components/ui/checkbox"
 import { Button } from "../../components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog"
 import { useAuth } from "../../hooks/use-auth"
 import { useToast } from "../../hooks/use-toast"
 import { validationSchemas } from "../../lib/utils/validators"
+
+interface PendingOAuth {
+  provider: string;
+  email?: string;
+  name?: string;
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -53,15 +68,31 @@ export default function RegisterPage() {
     score: 0,
     feedback: [] as string[],
   })
+  
+  // State for terms agreement modal
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [pendingOAuth, setPendingOAuth] = useState<PendingOAuth | null>(null)
+  const [termsAgreed, setTermsAgreed] = useState(false)
 
   useEffect(() => {
     if (error) {
       console.error("OAuth Error from URL:", error)
-      toast({
-        title: "Authentication Error",
-        description: getErrorMessage(error),
-        variant: "destructive",
-      })
+      
+      // Handle specific OAuth errors
+      if (error === "OAuthAccountNotLinked") {
+        toast({
+          title: "Account Already Exists",
+          description: "This email is already registered with another provider. Please sign in using your original method.",
+          variant: "destructive",
+          duration: 6000,
+        })
+      } else {
+        toast({
+          title: "Authentication Error",
+          description: getErrorMessage(error),
+          variant: "destructive",
+        })
+      }
     }
   }, [error, toast])
 
@@ -91,24 +122,24 @@ export default function RegisterPage() {
   }
 
   const handleSocialLogin = async (provider: string) => {
-    // Check terms agreement before social login
-    if (!formData.agreeToTerms) {
-      toast({
-        title: "Terms Required",
-        description: "You must agree to the terms and conditions to continue.",
-        variant: "destructive",
-      })
-      return
+    // If terms are already agreed, proceed with OAuth
+    if (formData.agreeToTerms) {
+      await initiateSocialLogin(provider)
+    } else {
+      // Store provider info and show terms modal
+      setPendingOAuth({ provider })
+      setShowTermsModal(true)
     }
+  }
 
+  const initiateSocialLogin = async (provider: string) => {
     setIsLoading(true)
     console.log(`🔵 Attempting to sign in with ${provider} from register page...`)
     
     try {
-      // Try with redirect false first to see what's happening
       const result = await signIn(provider, { 
         callbackUrl: '/',
-        redirect: false, // Set to false to see the result
+        redirect: false,
       })
       
       console.log("📡 SignIn result:", result)
@@ -139,20 +170,32 @@ export default function RegisterPage() {
     }
   }
 
-  // Test function to check if signIn is available
-  const testSignIn = async () => {
-    console.log("🔍 Testing signIn function:", typeof signIn)
-    if (typeof signIn === 'function') {
-      console.log("✅ signIn is available")
-    } else {
-      console.error("❌ signIn is not available")
+  const handleTermsAccept = () => {
+    if (!termsAgreed) {
+      toast({
+        title: "Terms Required",
+        description: "Please agree to the terms and conditions to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Update main form agreement
+    setFormData(prev => ({ ...prev, agreeToTerms: true }))
+    
+    // Close modal and proceed with pending OAuth
+    setShowTermsModal(false)
+    if (pendingOAuth) {
+      initiateSocialLogin(pendingOAuth.provider)
+      setPendingOAuth(null)
     }
   }
 
-  // Call test on mount
-  useEffect(() => {
-    testSignIn()
-  }, [])
+  const handleTermsCancel = () => {
+    setShowTermsModal(false)
+    setPendingOAuth(null)
+    setTermsAgreed(false)
+  }
 
   const validateForm = () => {
     const result = validationSchemas.register.safeParse(formData)
@@ -243,253 +286,317 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/5 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md"
-      >
-        <Card className="border-none shadow-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Create Account
-            </CardTitle>
-            <CardDescription className="text-center">
-              Enter your information to create an account
-            </CardDescription>
-          </CardHeader>
+    <>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/5 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-md"
+        >
+          <Card className="border-none shadow-xl">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">
+                Create Account
+              </CardTitle>
+              <CardDescription className="text-center">
+                Enter your information to create an account
+              </CardDescription>
+            </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Form fields - same as before */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    className="pl-10"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    className="pl-10"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-                
-                {formData.password && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            passwordStrength.score >= 4
-                              ? "bg-green-500"
-                              : passwordStrength.score >= 3
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                          }`}
-                          style={{ width: `${passwordStrength.score * 20}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {passwordStrength.score >= 4
-                          ? "Strong"
-                          : passwordStrength.score >= 3
-                          ? "Good"
-                          : "Weak"}
-                      </span>
-                    </div>
-                    {passwordStrength.feedback.length > 0 && (
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {passwordStrength.feedback.map((msg, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <CheckCircle className="h-3 w-3" />
-                            {msg}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Full Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      className="pl-10"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      disabled={isLoading}
+                    />
                   </div>
-                )}
-                
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      className="pl-10"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Password Strength Indicator */}
+                  {formData.password && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              passwordStrength.score >= 4
+                                ? "bg-green-500"
+                                : passwordStrength.score >= 3
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                            }`}
+                            style={{ width: `${passwordStrength.score * 20}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {passwordStrength.score >= 4
+                            ? "Strong"
+                            : passwordStrength.score >= 3
+                            ? "Good"
+                            : "Weak"}
+                        </span>
+                      </div>
+                      {passwordStrength.feedback.length > 0 && (
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          {passwordStrength.feedback.map((msg, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <AlertCircle className="h-3 w-3" />
+                              {msg}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                {/* Terms Checkbox */}
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="terms"
+                    checked={formData.agreeToTerms}
+                    onCheckedChange={(checked) => 
+                      handleInputChange("agreeToTerms", checked as boolean)
+                    }
                     disabled={isLoading}
                   />
-                  <button
+                  <Label htmlFor="terms" className="text-sm leading-none">
+                    I agree to the{" "}
+                    <Link href="/terms" className="text-primary hover:underline" target="_blank">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+                      Privacy Policy
+                    </Link>
+                  </Label>
+                </div>
+                {errors.agreeToTerms && (
+                  <p className="text-sm text-destructive">{errors.agreeToTerms}</p>
+                )}
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  className="w-full gap-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      Create Account
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Social Login Section */}
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator className="w-full" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <Button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    variant="outline"
+                    onClick={() => handleSocialLogin("google")}
+                    disabled={isLoading}
+                    className="gap-2"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={formData.agreeToTerms}
-                  onCheckedChange={(checked) => 
-                    handleInputChange("agreeToTerms", checked as boolean)
-                  }
-                  disabled={isLoading}
-                />
-                <Label htmlFor="terms" className="text-sm leading-none">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-primary hover:underline">
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/privacy" className="text-primary hover:underline">
-                    Privacy Policy
-                  </Link>
-                </Label>
-              </div>
-              {errors.agreeToTerms && (
-                <p className="text-sm text-destructive">{errors.agreeToTerms}</p>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full gap-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    Create Account
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or continue with
-                  </span>
+                    <Chrome className="h-4 w-4" />
+                    Google
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSocialLogin("facebook")}
+                    disabled={isLoading}
+                    className="gap-2"
+                  >
+                    <Facebook className="h-4 w-4" />
+                    Facebook
+                  </Button>
                 </div>
               </div>
+            </CardContent>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("google")}
-                  disabled={isLoading}
-                  className="gap-2"
+            <CardFooter className="flex flex-col space-y-4">
+              <div className="text-sm text-center text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="text-primary hover:underline font-medium"
                 >
-                  <Chrome className="h-4 w-4" />
-                  Google
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("facebook")}
-                  disabled={isLoading}
-                  className="gap-2"
-                >
-                  <Facebook className="h-4 w-4" />
-                  Facebook
-                </Button>
+                  Sign in
+                </Link>
               </div>
-            </div>
-          </CardContent>
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </div>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center text-muted-foreground">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-primary hover:underline font-medium"
-              >
-                Sign in
-              </Link>
+      {/* Terms Agreement Modal */}
+      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Terms and Conditions Required
+            </DialogTitle>
+            <DialogDescription>
+              Please review and accept our terms and conditions to continue with {pendingOAuth?.provider} sign up.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
+              <p className="font-medium">By creating an account, you agree to:</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>Our <Link href="/terms" className="text-primary hover:underline" target="_blank">Terms of Service</Link></li>
+                <li>Our <Link href="/privacy" className="text-primary hover:underline" target="_blank">Privacy Policy</Link></li>
+                <li>Receive account-related emails</li>
+                <li>Comply with our community guidelines</li>
+              </ul>
             </div>
-          </CardFooter>
-        </Card>
-      </motion.div>
-    </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="modal-terms"
+                checked={termsAgreed}
+                onCheckedChange={(checked) => setTermsAgreed(checked as boolean)}
+              />
+              <Label htmlFor="modal-terms" className="text-sm">
+                I have read and agree to the Terms of Service and Privacy Policy
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-4 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={handleTermsCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTermsAccept}
+              disabled={!termsAgreed}
+              className="gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Accept & Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

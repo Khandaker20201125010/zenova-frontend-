@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link"
+import { signOut } from "next-auth/react" // Add this import
 import { Button } from "../../../ui/button"
 import { Heart, LogOut, Menu, Moon, Settings, ShoppingBag, ShoppingCart, Sun, User, X } from "lucide-react"
 import { Badge } from "../../../ui/badge"
@@ -8,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "../../../ui/sheet"
+import { useToast } from "@/src/app/hooks/use-toast"
 
 export function MobileNav({ 
   routes, 
@@ -24,6 +26,30 @@ export function MobileNav({
 }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { toast } = useToast()
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ 
+        redirect: false,
+        callbackUrl: "/login"
+      })
+      setOpen(false)
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      })
+      // Force a hard navigation to login page
+      window.location.href = "/login"
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -32,10 +58,10 @@ export function MobileNav({
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+      <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between p-6 border-b">
             <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
                 <span className="text-white font-bold">S</span>
@@ -47,154 +73,168 @@ export function MobileNav({
             </Button>
           </div>
 
-          {/* User Info */}
-          {session && (
-            <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-muted">
-              <Avatar>
-                <AvatarImage src={session.user?.image} alt={session.user?.name} />
-                <AvatarFallback>
-                  {session.user?.name?.split(" ").map((n: any) => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{session.user?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {session.user?.role}
-              </Badge>
-            </div>
-          )}
-
           <ScrollArea className="flex-1">
-            {/* Navigation Links */}
-            <nav className="space-y-1">
-              {routes.map((route) => {
-                const Icon = route.icon
-                const isActive = pathname === route.href
-                
-                return (
-                  <Link
-                    key={route.href}
-                    href={route.href}
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-brand/10 text-brand"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {route.label}
-                  </Link>
-                )
-              })}
-            </nav>
-
-            <div className="mt-6 pt-6 border-t">
-              <div className="space-y-2">
-                <Link
-                  href="/cart"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-                >
-                  <div className="flex items-center gap-3">
-                    <ShoppingCart className="h-4 w-4" />
-                    Shopping Cart
+            <div className="p-6">
+              {/* User Info */}
+              {session && (
+                <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-muted">
+                  <Avatar>
+                    <AvatarImage src={session.user?.image} alt={session.user?.name} />
+                    <AvatarFallback>
+                      {session.user?.name?.split(" ").map((n: any) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{session.user?.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
                   </div>
-                  {cartItems > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5">
-                      {cartItems}
-                    </Badge>
-                  )}
-                </Link>
+                  <Badge variant="outline" className="text-xs">
+                    {session.user?.role}
+                  </Badge>
+                </div>
+              )}
 
-                <Link
-                  href="/favorites"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-                >
-                  <Heart className="h-4 w-4" />
-                  Favorites
-                </Link>
+              {/* Navigation Links */}
+              <nav className="space-y-1">
+                {routes.map((route) => {
+                  const Icon = route.icon
+                  const isActive = pathname === route.href
+                  
+                  return (
+                    <Link
+                      key={route.href}
+                      href={route.href}
+                      onClick={() => setOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-brand/10 text-brand"
+                          : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {route.label}
+                    </Link>
+                  )
+                })}
+              </nav>
 
-                <Link
-                  href="/orders"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Orders
-                </Link>
-              </div>
-            </div>
-
-            {session && (
+              {/* Shopping Links */}
               <div className="mt-6 pt-6 border-t">
-                <div className="space-y-1">
-                  <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                    Account
-                  </div>
+                <div className="space-y-2">
                   <Link
-                    href="/profile"
+                    href="/cart"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ShoppingCart className="h-4 w-4" />
+                      Shopping Cart
+                    </div>
+                    {cartItems > 0 && (
+                      <Badge variant="secondary" className="h-5 px-1.5">
+                        {cartItems}
+                      </Badge>
+                    )}
+                  </Link>
+
+                  <Link
+                    href="/favorites"
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
                   >
-                    <User className="h-4 w-4" />
-                    Profile Settings
+                    <Heart className="h-4 w-4" />
+                    Favorites
                   </Link>
-                  <button
-                    onClick={() => {
-                      signOut()
-                      setOpen(false)
-                    }}
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted text-destructive"
+
+                  <Link
+                    href="/orders"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
                   >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </button>
+                    <ShoppingBag className="h-4 w-4" />
+                    Orders
+                  </Link>
                 </div>
               </div>
-            )}
 
-            <div className="mt-6 pt-6 border-t">
-              <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase mb-2">
-                Theme
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={theme === "light" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setTheme("light")}
-                >
-                  <Sun className="mr-2 h-4 w-4" />
-                  Light
-                </Button>
-                <Button
-                  variant={theme === "dark" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setTheme("dark")}
-                >
-                  <Moon className="mr-2 h-4 w-4" />
-                  Dark
-                </Button>
-                <Button
-                  variant={theme === "system" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setTheme("system")}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  System
-                </Button>
+              {/* Account Section */}
+              {session && (
+                <div className="mt-6 pt-6 border-t">
+                  <div className="space-y-1">
+                    <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">
+                      Account
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                    >
+                      <User className="h-4 w-4" />
+                      Profile Settings
+                    </Link>
+                    
+                    {session.user?.role === "ADMIN" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted text-red-600 hover:text-red-700"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Theme Section */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase mb-3">
+                  Theme
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant={theme === "light" ? "default" : "outline"}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setTheme("light")}
+                  >
+                    <Sun className="mr-2 h-4 w-4" />
+                    Light
+                  </Button>
+                  <Button
+                    variant={theme === "dark" ? "default" : "outline"}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setTheme("dark")}
+                  >
+                    <Moon className="mr-2 h-4 w-4" />
+                    Dark
+                  </Button>
+                  <Button
+                    variant={theme === "system" ? "default" : "outline"}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setTheme("system")}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    System
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>
 
           {/* Footer */}
-          <div className="mt-auto pt-6 border-t">
+          <div className="p-6 border-t">
             {!session ? (
               <div className="space-y-2">
                 <Button asChild className="w-full" onClick={() => setOpen(false)}>
@@ -205,18 +245,9 @@ export function MobileNav({
                 </Button>
               </div>
             ) : (
-              <div className="text-center text-xs text-muted-foreground">
-                {session.user?.role === "ADMIN" && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="block py-2 hover:text-foreground"
-                  >
-                    Admin Panel
-                  </Link>
-                )}
-                <p className="py-2">
-                  © {new Date().getFullYear()} SaaS Platform
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  © {new Date().getFullYear()} SaaS Platform. All rights reserved.
                 </p>
               </div>
             )}

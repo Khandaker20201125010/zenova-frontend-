@@ -7,6 +7,7 @@ type ToastVariant = "default" | "destructive" | "success" | "warning" | "error"
 
 interface ToastProps {
   title: string
+  duration?: number
   description?: string
   variant?: ToastVariant
   icon?: React.ReactNode

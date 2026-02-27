@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { usePathname, useRouter } from "next/navigation"
 import { 
   Menu, 
   X, 
@@ -25,11 +24,11 @@ import {
   Sun,
   Moon,
   Heart,
-  ShoppingBag
+  ShoppingBag,
+  Loader2
 } from "lucide-react"
 
 import { Button } from "../../../ui/button"
-
 import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
 import { Badge } from "../../../ui/badge"
 import {
@@ -40,8 +39,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu"
-
 import { NotificationCenter } from "../../../notifications/notification-center"
+import { useToast } from "@/src/app/hooks/use-toast"
 
 // Desktop Navigation Component
 export function DesktopNav({ 
@@ -62,6 +61,33 @@ export function DesktopNav({
   setSearchOpen: (open: boolean) => void
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true)
+      await signOut({ 
+        redirect: false,
+        callbackUrl: "/login"
+      })
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      })
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <div className="hidden md:flex items-center gap-6">
@@ -92,6 +118,7 @@ export function DesktopNav({
           variant="ghost"
           size="icon"
           onClick={() => setSearchOpen(!searchOpen)}
+          aria-label="Search"
         >
           <Search className="h-5 w-5" />
         </Button>
@@ -99,7 +126,7 @@ export function DesktopNav({
         {/* Theme Toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Toggle theme">
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
@@ -123,7 +150,7 @@ export function DesktopNav({
 
         {/* Cart */}
         <Button variant="ghost" size="icon" className="relative" asChild>
-          <Link href="/cart">
+          <Link href="/cart" aria-label="Shopping cart">
             <ShoppingCart className="h-5 w-5" />
             {cartItems > 0 && (
               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
@@ -140,11 +167,11 @@ export function DesktopNav({
         {session ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="User menu">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={session.user?.image} alt={session.user?.name} />
                   <AvatarFallback>
-                    {session.user?.name?.split(" ").map(( n: any) => n[0]).join("")}
+                    {session.user?.name?.split(" ").map((n: any) => n[0]).join("").toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -162,25 +189,25 @@ export function DesktopNav({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard">
+                <Link href="/dashboard" className="flex items-center">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Dashboard
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/profile">
+                <Link href="/profile" className="flex items-center">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/favorites">
+                <Link href="/favorites" className="flex items-center">
                   <Heart className="mr-2 h-4 w-4" />
                   Favorites
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/orders">
+                <Link href="/orders" className="flex items-center">
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Orders
                 </Link>
@@ -189,7 +216,7 @@ export function DesktopNav({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">
+                    <Link href="/admin" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
                       Admin Panel
                     </Link>
@@ -197,21 +224,34 @@ export function DesktopNav({
                 </>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-red-600 focus:text-red-600 cursor-pointer"
+              >
+                {isLoggingOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging out...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </>
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <>
-            <Button variant="ghost" asChild>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild size="sm">
               <Link href="/login">Login</Link>
             </Button>
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href="/register">Sign Up</Link>
             </Button>
-          </>
+          </div>
         )}
       </div>
     </div>
