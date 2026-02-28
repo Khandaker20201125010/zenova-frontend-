@@ -1,15 +1,33 @@
+// components/layout/navbar/mobile-nav.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
+
 import Link from "next/link"
-import { signOut } from "next-auth/react" // Add this import
-import { Button } from "../../../ui/button"
+import { signOut } from "next-auth/react"
+import { Button } from "../../../ui//button"
 import { Heart, LogOut, Menu, Moon, Settings, ShoppingBag, ShoppingCart, Sun, User, X } from "lucide-react"
-import { Badge } from "../../../ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
+import { Badge } from "../../../ui//badge"
+
+import { Avatar, AvatarFallback, AvatarImage } from "../../../ui//avatar"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Sheet, SheetContent, SheetTrigger } from "../../../ui/sheet"
+import { Sheet, SheetContent, SheetTrigger } from "../../../ui//sheet"
 import { useToast } from "@/src/app/hooks/use-toast"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface Route {
+  href: string;
+  label: string;
+  icon: any;
+}
+
+interface MobileNavProps {
+  routes: Route[];
+  session: any;
+  cartItems: number;
+  theme: string | undefined;
+  setTheme: (theme: string) => void;
+}
 
 export function MobileNav({ 
   routes, 
@@ -17,19 +35,15 @@ export function MobileNav({
   cartItems,
   theme,
   setTheme 
-}: { 
-  routes: any[], 
-  session: any, 
-  cartItems: number,
-  theme: string | undefined,
-  setTheme: (theme: string) => void
-}) {
+}: MobileNavProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true)
       await signOut({ 
         redirect: false,
         callbackUrl: "/login"
@@ -39,7 +53,6 @@ export function MobileNav({
         title: "Logged out",
         description: "You have been successfully logged out",
       })
-      // Force a hard navigation to login page
       window.location.href = "/login"
     } catch (error) {
       console.error("Logout error:", error)
@@ -48,7 +61,19 @@ export function MobileNav({
         description: "Failed to log out. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoggingOut(false)
     }
+  }
+
+  const getUserInitials = () => {
+    if (!session?.user?.name) return "U"
+    return session.user.name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   return (
@@ -63,7 +88,7 @@ export function MobileNav({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
                 <span className="text-white font-bold">S</span>
               </div>
               <span className="text-xl font-bold">SaaS Platform</span>
@@ -79,9 +104,12 @@ export function MobileNav({
               {session && (
                 <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-muted">
                   <Avatar>
-                    <AvatarImage src={session.user?.image} alt={session.user?.name} />
+                    <AvatarImage 
+                      src={session.user?.image || session.user?.avatar} 
+                      alt={session.user?.name} 
+                    />
                     <AvatarFallback>
-                      {session.user?.name?.split(" ").map((n: any) => n[0]).join("")}
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
@@ -107,7 +135,7 @@ export function MobileNav({
                       onClick={() => setOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-brand/10 text-brand"
+                          ? "bg-primary/10 text-primary"
                           : "hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -186,10 +214,20 @@ export function MobileNav({
 
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted text-red-600 hover:text-red-700"
+                      disabled={isLoggingOut}
+                      className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted text-red-600 hover:text-red-700 disabled:opacity-50"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Logout
+                      {isLoggingOut ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                          Logging out...
+                        </>
+                      ) : (
+                        <>
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

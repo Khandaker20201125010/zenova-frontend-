@@ -1,8 +1,9 @@
+// components/layout/navbar/desktop-nav.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { 
@@ -28,9 +29,9 @@ import {
   Loader2
 } from "lucide-react"
 
-import { Button } from "../../../ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
-import { Badge } from "../../../ui/badge"
+import { Button } from "../../../ui//button"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../ui//avatar"
+import { Badge } from "../../../ui//badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,11 +39,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../ui/dropdown-menu"
-import { NotificationCenter } from "../../../notifications/notification-center"
-import { useToast } from "@/src/app/hooks/use-toast"
+} from "../../../ui//dropdown-menu"
 
-// Desktop Navigation Component
+import { useToast } from "@/src/app/hooks/use-toast"
+import { NotificationCenter } from "../../../notifications/notification-center"
+
+interface Route {
+  href: string;
+  label: string;
+  icon: any;
+}
+
+interface DesktopNavProps {
+  routes: Route[];
+  session: any;
+  cartItems: number;
+  theme: string | undefined;
+  setTheme: (theme: string) => void;
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+}
+
 export function DesktopNav({ 
   routes, 
   session, 
@@ -51,15 +68,7 @@ export function DesktopNav({
   setTheme,
   searchOpen,
   setSearchOpen 
-}: { 
-  routes: any[], 
-  session: any, 
-  cartItems: number,
-  theme: string | undefined,
-  setTheme: (theme: string) => void,
-  searchOpen: boolean,
-  setSearchOpen: (open: boolean) => void
-}) {
+}: DesktopNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { toast } = useToast()
@@ -77,6 +86,7 @@ export function DesktopNav({
         description: "You have been successfully logged out",
       })
       router.push("/login")
+      router.refresh()
     } catch (error) {
       console.error("Logout error:", error)
       toast({
@@ -87,6 +97,17 @@ export function DesktopNav({
     } finally {
       setIsLoggingOut(false)
     }
+  }
+
+  // Helper function to get user initials
+  const getUserInitials = () => {
+    if (!session?.user?.name) return "U"
+    return session.user.name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   return (
@@ -101,8 +122,8 @@ export function DesktopNav({
             <Link
               key={route.href}
               href={route.href}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-brand ${
-                isActive ? "text-brand" : "text-muted-foreground"
+              className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
+                isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -169,9 +190,12 @@ export function DesktopNav({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="User menu">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user?.image} alt={session.user?.name} />
+                  <AvatarImage 
+                    src={session.user?.image || session.user?.avatar} 
+                    alt={session.user?.name} 
+                  />
                   <AvatarFallback>
-                    {session.user?.name?.split(" ").map((n: any) => n[0]).join("").toUpperCase()}
+                    {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -185,45 +209,57 @@ export function DesktopNav({
                   <p className="text-xs leading-none text-muted-foreground">
                     {session.user?.email}
                   </p>
+                  <p className="text-xs leading-none text-muted-foreground mt-1">
+                    Role: {session.user?.role}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              
+              {/* Common menu items for all authenticated users */}
               <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="flex items-center">
+                <Link href="/dashboard" className="flex items-center cursor-pointer">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Dashboard
                 </Link>
               </DropdownMenuItem>
+              
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center">
+                <Link href="/profile" className="flex items-center cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
+              
               <DropdownMenuItem asChild>
-                <Link href="/favorites" className="flex items-center">
+                <Link href="/favorites" className="flex items-center cursor-pointer">
                   <Heart className="mr-2 h-4 w-4" />
                   Favorites
                 </Link>
               </DropdownMenuItem>
+              
               <DropdownMenuItem asChild>
-                <Link href="/orders" className="flex items-center">
+                <Link href="/orders" className="flex items-center cursor-pointer">
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Orders
                 </Link>
               </DropdownMenuItem>
+
+              {/* Admin menu items - only visible to admins */}
               {session.user?.role === "ADMIN" && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center">
+                    <Link href="/admin" className="flex items-center cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       Admin Panel
                     </Link>
                   </DropdownMenuItem>
                 </>
               )}
+              
               <DropdownMenuSeparator />
+              
               <DropdownMenuItem 
                 onClick={handleLogout}
                 disabled={isLoggingOut}

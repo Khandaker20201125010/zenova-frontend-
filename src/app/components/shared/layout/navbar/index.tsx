@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/layout/navbar/index.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Home,
@@ -17,20 +16,19 @@ import {
   HelpCircle,
   Settings,
   User,
-  ShoppingCart,
   Search
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useCartStore } from "@/src/app/store/cart-store"
-import { Input } from "../../../ui/input"
+
 import { MobileNav } from "./mobile-nav"
 import { DesktopNav } from "./desktop-nav"
+import { Input } from "../../../ui/input"
 
 export function Navbar() {
-  const { data: session } = useSession()
-  const pathname = usePathname()
+  const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
-  const cartItems = useCartStore((state: any) => state.getItemCount())
+  const cartItems = useCartStore((state: any) => state.getItemCount?.() || 0)
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -42,7 +40,7 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Logged out routes
+  // Define routes based on authentication status and role
   const publicRoutes = [
     { href: "/", label: "Home", icon: Home },
     { href: "/products", label: "Products", icon: Package },
@@ -51,26 +49,31 @@ export function Navbar() {
     { href: "/contact", label: "Contact", icon: HelpCircle },
   ]
 
-  // Logged in routes
   const userRoutes = [
-    ...publicRoutes,
+    { href: "/", label: "Home", icon: Home },
+    { href: "/products", label: "Products", icon: Package },
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/profile", label: "Profile", icon: User },
+    { href: "/orders", label: "Orders", icon: CreditCard },
   ]
 
-  // Admin routes
   const adminRoutes = [
-    ...userRoutes,
+    { href: "/", label: "Home", icon: Home },
     { href: "/admin", label: "Admin", icon: Settings },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/orders", label: "Orders", icon: CreditCard },
+    { href: "/admin/products", label: "Products", icon: Package },
   ]
 
-  const routes = session?.user?.role === "ADMIN" 
-    ? adminRoutes 
-    : session 
-    ? userRoutes 
-    : publicRoutes
+  // Determine which routes to show
+  let routes = publicRoutes
+  if (session?.user) {
+    if (session.user.role === "ADMIN") {
+      routes = adminRoutes
+    } else {
+      routes = userRoutes
+    }
+  }
 
   return (
     <header
@@ -84,7 +87,7 @@ export function Navbar() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
               <span className="text-white font-bold">S</span>
             </div>
             <span className="text-xl font-bold hidden sm:inline-block">

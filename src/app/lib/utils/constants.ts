@@ -92,6 +92,7 @@ export const DASHBOARD_NAV_ITEMS = {
     { href: '/dashboard/orders', label: 'Orders', icon: 'Package' },
     { href: '/dashboard/favorites', label: 'Favorites', icon: 'Heart' },
     { href: '/dashboard/reviews', label: 'Reviews', icon: 'Star' },
+     { href: '/user/profile', label: 'Profile', icon: 'User' },
     { href: '/dashboard/settings', label: 'Settings', icon: 'Settings' },
   ],
   ADMIN: [

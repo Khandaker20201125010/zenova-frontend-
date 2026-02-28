@@ -5,8 +5,8 @@ import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
-import { Button } from "../../../ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../ui//avatar"
+import { Button } from "../../../ui//button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../ui/dropdown-menu"
+} from "../../../ui//dropdown-menu"
 import { BarChart3, Heart, LogOut, Settings, ShoppingBag, User, Loader2 } from "lucide-react"
 import { useToast } from "@/src/app/hooks/use-toast"
 
@@ -36,6 +36,7 @@ export function UserMenu() {
         description: "You have been successfully logged out",
       })
       router.push("/login")
+      router.refresh()
     } catch (error) {
       console.error("Logout error:", error)
       toast({
@@ -107,6 +108,9 @@ export function UserMenu() {
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {session.user.email || "No email provided"}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground mt-1">
+              Role: {session.user.role}
             </p>
           </div>
         </DropdownMenuLabel>
