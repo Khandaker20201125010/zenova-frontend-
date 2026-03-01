@@ -9,14 +9,16 @@ import { Bell, Check, X, AlertCircle, Info, CheckCircle } from "lucide-react"
 
 
 import { api } from "../../lib/api/axios-client"
-import {   DropdownMenu,
+import {
+  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger, } from "../ui/dropdown-menu"
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu"
 import { Button } from "../ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@/src/app/components/ui/scroll-area"
 import { Badge } from "../ui/badge"
 import { useToast } from "../../hooks/use-toast"
 

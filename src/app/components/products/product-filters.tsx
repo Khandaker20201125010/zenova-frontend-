@@ -3,10 +3,10 @@
 "use client"
 
 import { useState } from "react"
-import { 
-  Filter, 
-  DollarSign, 
-  Tag, 
+import {
+  Filter,
+  DollarSign,
+  Tag,
   Check,
   Star
 } from "lucide-react"
@@ -15,8 +15,8 @@ import { Button } from "../ui/button"
 import { Checkbox } from "../ui/checkbox"
 import { Label } from "../ui/label"
 import { Separator } from "../ui/separator"
-import { Slider } from "@/components/ui/slider"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Slider } from "@/src/app/components/ui/slider"
+import { RadioGroup, RadioGroupItem } from "@/src/app/components/ui/radio-group"
 
 
 interface ProductsFiltersProps {
@@ -24,9 +24,9 @@ interface ProductsFiltersProps {
   currentFilters: any
 }
 
-export default function ProductsFilters({ 
-  categories, 
-  currentFilters 
+export default function ProductsFilters({
+  categories,
+  currentFilters
 }: ProductsFiltersProps) {
   const [priceRange, setPriceRange] = useState([
     currentFilters.minPrice || 0,
@@ -56,31 +56,31 @@ export default function ProductsFilters({
 
   const applyFilters = () => {
     const params = new URLSearchParams()
-    
+
     // Reset to page 1 when applying filters
     params.set("page", "1")
-    
+
     if (selectedCategories.length > 0) {
       params.set("category", selectedCategories[0])
     }
-    
+
     if (priceRange[0] > 0 || priceRange[1] < 1000) {
       params.set("minPrice", priceRange[0].toString())
       params.set("maxPrice", priceRange[1].toString())
     }
-    
+
     if (selectedTags.length > 0) {
       params.set("tags", selectedTags.join(","))
     }
-    
+
     if (selectedRating) {
       params.set("minRating", selectedRating.toString())
     }
-    
+
     if (inStockOnly) {
       params.set("inStock", "true")
     }
-    
+
     window.location.href = `/products?${params.toString()}`
   }
 
@@ -153,7 +153,7 @@ export default function ProductsFilters({
           <DollarSign className="h-4 w-4" />
           <h4 className="font-medium">Price Range</h4>
         </div>
-        
+
         <Slider
           value={priceRange}
           min={0}
@@ -162,7 +162,7 @@ export default function ProductsFilters({
           onValueChange={setPriceRange}
           className="my-6"
         />
-        
+
         <div className="flex items-center justify-between">
           <div className="text-sm">
             ${priceRange[0]} - ${priceRange[1]}
@@ -185,10 +185,10 @@ export default function ProductsFilters({
           <Star className="h-4 w-4" />
           <h4 className="font-medium">Rating</h4>
         </div>
-        
+
         <RadioGroup
           value={selectedRating?.toString() || ""}
-          onValueChange={(value : any) => setSelectedRating(value ? parseInt(value) : null)}
+          onValueChange={(value: any) => setSelectedRating(value ? parseInt(value) : null)}
         >
           {[5, 4, 3, 2, 1].map((rating) => (
             <div key={rating} className="flex items-center space-x-2">
@@ -199,9 +199,8 @@ export default function ProductsFilters({
                     {[...Array(5)].map((_, i) => (
                       <span
                         key={i}
-                        className={`text-sm ${
-                          i < rating ? "text-yellow-400" : "text-gray-300"
-                        }`}
+                        className={`text-sm ${i < rating ? "text-yellow-400" : "text-gray-300"
+                          }`}
                       >
                         ★
                       </span>
@@ -225,7 +224,7 @@ export default function ProductsFilters({
           <Tag className="h-4 w-4" />
           <h4 className="font-medium">Tags</h4>
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
           {commonTags.map((tag) => (
             <Button
@@ -250,7 +249,7 @@ export default function ProductsFilters({
           <Checkbox
             id="in-stock"
             checked={inStockOnly}
-            onCheckedChange={(checked : any) => setInStockOnly(checked as boolean)}
+            onCheckedChange={(checked: any) => setInStockOnly(checked as boolean)}
           />
           <Label htmlFor="in-stock" className="cursor-pointer">
             In Stock Only

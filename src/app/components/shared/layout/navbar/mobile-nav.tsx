@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "../../../ui//sheet"
 import { useToast } from "@/src/app/hooks/use-toast"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@/src/app/components/ui/scroll-area"
 
 interface Route {
   href: string;
@@ -29,12 +29,12 @@ interface MobileNavProps {
   setTheme: (theme: string) => void;
 }
 
-export function MobileNav({ 
-  routes, 
-  session, 
+export function MobileNav({
+  routes,
+  session,
   cartItems,
   theme,
-  setTheme 
+  setTheme
 }: MobileNavProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -44,7 +44,7 @@ export function MobileNav({
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
-      await signOut({ 
+      await signOut({
         redirect: false,
         callbackUrl: "/login"
       })
@@ -104,9 +104,9 @@ export function MobileNav({
               {session && (
                 <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-muted">
                   <Avatar>
-                    <AvatarImage 
-                      src={session.user?.image || session.user?.avatar} 
-                      alt={session.user?.name} 
+                    <AvatarImage
+                      src={session.user?.image || session.user?.avatar}
+                      alt={session.user?.name}
                     />
                     <AvatarFallback>
                       {getUserInitials()}
@@ -127,17 +127,16 @@ export function MobileNav({
                 {routes.map((route) => {
                   const Icon = route.icon
                   const isActive = pathname === route.href
-                  
+
                   return (
                     <Link
                       key={route.href}
                       href={route.href}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
                           ? "bg-primary/10 text-primary"
                           : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
+                        }`}
                     >
                       <Icon className="h-4 w-4" />
                       {route.label}
@@ -200,7 +199,7 @@ export function MobileNav({
                       <User className="h-4 w-4" />
                       Profile Settings
                     </Link>
-                    
+
                     {session.user?.role === "ADMIN" && (
                       <Link
                         href="/admin"

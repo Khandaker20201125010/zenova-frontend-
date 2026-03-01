@@ -33,7 +33,7 @@ import { Skeleton } from "../../components/ui/skeleton"
 import Image from "next/image"
 import { useProductsQuery } from "../../hooks/use-query"
 import { useCategories } from "../../hooks/use-categories"
-import { Slider } from "@/components/ui/slider"
+import { Slider } from "@/src/app/components/ui/slider"
 import { ProductCard } from "@/src/app/components/products/product-card"
 import { Category } from "@/src/app/lib/types"
 import { useTags } from "../../hooks/use-tags"
@@ -99,7 +99,7 @@ export default function ProductsPage() {
 
   const buildUrl = useCallback((updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === null || value === "") {
         params.delete(key)
@@ -107,11 +107,11 @@ export default function ProductsPage() {
         params.set(key, value)
       }
     })
-    
+
     if (!('page' in updates)) {
       params.set('page', '1')
     }
-    
+
     params.set('limit', limit.toString())
     const queryString = params.toString()
     return queryString ? `/products?${queryString}` : "/products"
@@ -126,7 +126,7 @@ export default function ProductsPage() {
     const newTags = selectedTags.includes(tagValue)
       ? selectedTags.filter(t => t !== tagValue)
       : [...selectedTags, tagValue]
-    
+
     const url = buildUrl({ tags: newTags.length ? newTags.join(',') : null })
     router.push(url, { scroll: false })
   }
@@ -138,9 +138,9 @@ export default function ProductsPage() {
   }
 
   const handlePriceChange = (value: number[]) => {
-    const url = buildUrl({ 
-      minPrice: value[0].toString(), 
-      maxPrice: value[1].toString() 
+    const url = buildUrl({
+      minPrice: value[0].toString(),
+      maxPrice: value[1].toString()
     })
     router.push(url, { scroll: false })
   }
@@ -234,11 +234,10 @@ export default function ProductsPage() {
                   <div className="space-y-2">
                     <button
                       onClick={() => handleCategorySelect(null)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        !selectedCategoryId
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${!selectedCategoryId
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-accent"
-                      }`}
+                        }`}
                     >
                       All Categories
                     </button>
@@ -246,11 +245,10 @@ export default function ProductsPage() {
                       <button
                         key={category.id}
                         onClick={() => handleCategorySelect(category)}
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                          selectedCategoryId === category.id
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selectedCategoryId === category.id
                             ? "bg-primary text-primary-foreground"
                             : "hover:bg-accent"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <span>{category.name}</span>
@@ -329,8 +327,8 @@ export default function ProductsPage() {
               <Separator className="my-6" />
 
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="inStock" 
+                <Checkbox
+                  id="inStock"
                   checked={inStock}
                   onCheckedChange={handleInStockChange}
                 />
@@ -528,7 +526,7 @@ export default function ProductsPage() {
 
       {showFilters && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div 
+          <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowFilters(false)}
           />
