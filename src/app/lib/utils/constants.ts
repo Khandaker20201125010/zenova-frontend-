@@ -1,4 +1,3 @@
-// lib/utils/constants.ts
 // Application constants
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaS Platform'
@@ -85,14 +84,14 @@ export const NAV_ITEMS = [
   { href: '/contact', label: 'Contact' },
 ]
 
-// Dashboard navigation
+// FIXED: Dashboard navigation with correct routes
 export const DASHBOARD_NAV_ITEMS = {
   USER: [
     { href: '/dashboard', label: 'Overview', icon: 'LayoutDashboard' },
     { href: '/dashboard/orders', label: 'Orders', icon: 'Package' },
     { href: '/dashboard/favorites', label: 'Favorites', icon: 'Heart' },
     { href: '/dashboard/reviews', label: 'Reviews', icon: 'Star' },
-     { href: '/user/profile', label: 'Profile', icon: 'User' },
+    { href: '/user/profile', label: 'Profile', icon: 'User' },
     { href: '/dashboard/settings', label: 'Settings', icon: 'Settings' },
   ],
   ADMIN: [

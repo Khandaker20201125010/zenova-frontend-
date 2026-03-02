@@ -1,9 +1,10 @@
+import { UserSidebar } from "../components/shared/layout/sidebar/user-sidebar";
 
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
             <div className="flex min-h-screen font-display">       
-
+                    <UserSidebar />
                 <div className="flex flex-1 flex-col">
                  
                

@@ -1,4 +1,3 @@
-// middleware.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
@@ -9,13 +8,13 @@ export default withAuth(
 
     // Define role-based access
     const adminRoutes = ['/admin', '/admin/:path*'];
-    const userRoutes = ['/dashboard', '/user/:path*', '/orders', '/favorites'];
-    const publicRoutes = ['/', '/products', '/about', '/contact', '/login', '/register'];
+    const protectedRoutes = ['/dashboard', '/dashboard/:path*', '/user/:path*'];
+    const publicRoutes = ['/', '/products', '/about', '/contact', '/login', '/register', '/cart'];
 
     // Redirect unauthenticated users trying to access protected routes
     if (!token) {
       // Check if the route is protected
-      const isProtectedRoute = [...adminRoutes, ...userRoutes].some(route => {
+      const isProtectedRoute = protectedRoutes.some(route => {
         if (route.includes(':path*')) {
           const baseRoute = route.replace('/:path*', '');
           return path.startsWith(baseRoute);
@@ -36,11 +35,6 @@ export default withAuth(
       if (path.startsWith('/admin') && token.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
-
-      // Regular users can't access certain admin routes
-      if (path.startsWith('/admin') && token.role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
     }
 
     return NextResponse.next();
@@ -57,8 +51,5 @@ export const config = {
     '/dashboard/:path*',
     '/admin/:path*',
     '/user/:path*',
-    '/orders/:path*',
-    '/favorites/:path*',
-    '/profile/:path*',
   ],
 };

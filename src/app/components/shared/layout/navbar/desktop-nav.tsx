@@ -1,4 +1,3 @@
-// components/layout/navbar/desktop-nav.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -29,9 +28,9 @@ import {
   Loader2
 } from "lucide-react"
 
-import { Button } from "../../../ui//button"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../ui//avatar"
-import { Badge } from "../../../ui//badge"
+import { Button } from "../../../ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
+import { Badge } from "../../../ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +38,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../ui//dropdown-menu"
+} from "../../../ui/dropdown-menu"
 
 import { useToast } from "@/src/app/hooks/use-toast"
 import { NotificationCenter } from "../../../notifications/notification-center"
@@ -216,30 +215,33 @@ export function DesktopNav({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               
-              {/* Common menu items for all authenticated users */}
+              {/* FIXED: Common menu items with correct routes */}
               <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="flex items-center cursor-pointer">
+                <Link href="/dashboard" className="flex items-center cursor-pointer w-full">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Dashboard
                 </Link>
               </DropdownMenuItem>
               
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center cursor-pointer">
+                {/* FIXED: Changed from /profile to /user/profile */}
+                <Link href="/user/profile" className="flex items-center cursor-pointer w-full">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               
               <DropdownMenuItem asChild>
-                <Link href="/favorites" className="flex items-center cursor-pointer">
+                {/* FIXED: Changed from /favorites to /dashboard/favorites */}
+                <Link href="/dashboard/favorites" className="flex items-center cursor-pointer w-full">
                   <Heart className="mr-2 h-4 w-4" />
                   Favorites
                 </Link>
               </DropdownMenuItem>
               
               <DropdownMenuItem asChild>
-                <Link href="/orders" className="flex items-center cursor-pointer">
+                {/* FIXED: Changed from /orders to /dashboard/orders */}
+                <Link href="/dashboard/orders" className="flex items-center cursor-pointer w-full">
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Orders
                 </Link>
@@ -250,7 +252,7 @@ export function DesktopNav({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center cursor-pointer">
+                    <Link href="/admin" className="flex items-center cursor-pointer w-full">
                       <Settings className="mr-2 h-4 w-4" />
                       Admin Panel
                     </Link>
