@@ -6,15 +6,15 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Define role-based access
+    // Define routes
     const adminRoutes = ['/admin', '/admin/:path*'];
-    const protectedRoutes = ['/dashboard', '/dashboard/:path*', '/user/:path*'];
+    const userRoutes = ['/dashboard', '/dashboard/:path*', '/user/:path*'];
     const publicRoutes = ['/', '/products', '/about', '/contact', '/login', '/register', '/cart'];
 
-    // Redirect unauthenticated users trying to access protected routes
+    // If no token, redirect to login for protected routes
     if (!token) {
-      // Check if the route is protected
-      const isProtectedRoute = protectedRoutes.some(route => {
+      // Check if current path is a protected route
+      const isProtectedRoute = [...adminRoutes, ...userRoutes].some(route => {
         if (route.includes(':path*')) {
           const baseRoute = route.replace('/:path*', '');
           return path.startsWith(baseRoute);
@@ -27,14 +27,26 @@ export default withAuth(
         url.searchParams.set('callbackUrl', encodeURI(path));
         return NextResponse.redirect(url);
       }
+      
+      return NextResponse.next();
     }
 
-    // Role-based access control
-    if (token) {
-      // Admin only routes
-      if (path.startsWith('/admin') && token.role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
+    // User is authenticated - check role-based access
+    const userRole = token.role as string;
+
+    // Admin trying to access user routes (redirect to admin dashboard)
+    if (userRole === 'ADMIN' && path.startsWith('/dashboard')) {
+      return NextResponse.redirect(new URL('/admin', req.url));
+    }
+
+    // Admin trying to access user profile (redirect to admin dashboard)
+    if (userRole === 'ADMIN' && path.startsWith('/user')) {
+      return NextResponse.redirect(new URL('/admin', req.url));
+    }
+
+    // Regular user trying to access admin routes (redirect to user dashboard)
+    if (userRole !== 'ADMIN' && path.startsWith('/admin')) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     return NextResponse.next();

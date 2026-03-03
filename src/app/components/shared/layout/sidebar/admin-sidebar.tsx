@@ -1,9 +1,8 @@
-// components/layout/sidebar/admin-sidebar.tsx
 "use client"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   Users,
@@ -27,7 +26,8 @@ import { Button } from "../../../ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "../../../ui/avatar"
 import { Badge } from "../../../ui/badge"
 import { Separator } from "../../../ui/separator"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
+import { useToast } from "@/src/app/hooks/use-toast"
 
 const adminNavItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -44,14 +44,38 @@ const adminNavItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [collapsed, setCollapsed] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   const isActive = (href: string) => {
     if (href === "/admin") {
       return pathname === href
     }
     return pathname.startsWith(href)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true)
+      await signOut({ redirect: false })
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out",
+      })
+      router.push("/login")
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   return (
@@ -90,11 +114,11 @@ export function AdminSidebar() {
       </div>
 
       {/* User Info */}
-      {!collapsed && session && (
+      {!collapsed && session?.user && (
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={session.user.avatar} alt={session.user.name} />
+              <AvatarImage src={session.user.image || session.user.avatar} alt={session.user.name} />
               <AvatarFallback>
                 {session.user.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -181,7 +205,7 @@ export function AdminSidebar() {
                   className="w-full justify-start h-9"
                   asChild
                 >
-                  <Link href="/profile">
+                  <Link href="/user/profile">
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </Link>
@@ -220,12 +244,11 @@ export function AdminSidebar() {
               variant="outline"
               className="w-full"
               size="sm"
-              asChild
+              onClick={handleSignOut}
+              disabled={isSigningOut}
             >
-              <Link href="/api/auth/signout">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Link>
+              <LogOut className="mr-2 h-4 w-4" />
+              {isSigningOut ? "Signing out..." : "Sign out"}
             </Button>
           </div>
         ) : (
@@ -235,10 +258,13 @@ export function AdminSidebar() {
                 <Home className="h-5 w-5" />
               </Link>
             </Button>
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/api/auth/signout">
-                <LogOut className="h-5 w-5" />
-              </Link>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+            >
+              <LogOut className="h-5 w-5" />
             </Button>
           </div>
         )}
