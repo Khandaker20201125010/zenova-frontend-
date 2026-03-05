@@ -41,19 +41,19 @@ import {
 import { useToast } from "@/src/app/hooks/use-toast"
 import { Badge } from "../../../ui/badge"
 
-// Role-specific menu items
+// Role-specific menu items (excluding Dashboard and Profile)
 const roleMenus = {
   ADMIN: [
-    { href: "/dashboard/admin", label: "Dashboard", icon: BarChart3, description: "Admin dashboard" },
     { href: "/dashboard/admin/users", label: "Users", icon: Users, description: "Manage users", badge: "156" },
     { href: "/dashboard/admin/products", label: "Products", icon: Package, description: "Manage products", badge: "89" },
     { href: "/dashboard/admin/orders", label: "Orders", icon: ShoppingBag, description: "Manage orders", badge: "23" },
     { href: "/dashboard/admin/analytics", label: "Analytics", icon: TrendingUp, description: "View analytics" },
     { href: "/dashboard/admin/payments", label: "Payments", icon: DollarSign, description: "Payment management" },
     { href: "/dashboard/admin/reports", label: "Reports", icon: FileSpreadsheet, description: "System reports" },
+    { href: "/dashboard/admin/blog", label: "Blog", icon: FileText, description: "Manage blog posts" },
+    { href: "/dashboard/admin/settings", label: "Settings", icon: Settings, description: "System settings" },
   ],
   MANAGER: [
-    { href: "/dashboard/manager", label: "Dashboard", icon: BarChart3, description: "Manager dashboard" },
     { href: "/dashboard/manager/products", label: "Products", icon: Package, description: "Manage products", badge: "12" },
     { href: "/dashboard/manager/inventory", label: "Inventory", icon: Store, description: "Stock management", badge: "Low stock" },
     { href: "/dashboard/manager/orders", label: "Orders", icon: ShoppingBag, description: "Manage orders", badge: "5" },
@@ -62,7 +62,6 @@ const roleMenus = {
     { href: "/dashboard/manager/staff", label: "Staff", icon: Users, description: "Manage staff" },
   ],
   USER: [
-    { href: "/dashboard/user", label: "Dashboard", icon: BarChart3, description: "Your dashboard" },
     { href: "/dashboard/user/orders", label: "Orders", icon: ShoppingBag, description: "Track your orders", badge: "2" },
     { href: "/dashboard/user/favorites", label: "Favorites", icon: Heart, description: "Your favorite items", badge: "3" },
     { href: "/dashboard/user/reviews", label: "Reviews", icon: Star, description: "Your reviews" },
@@ -130,6 +129,23 @@ export function UserMenu() {
   const badge = roleBadges[role] || roleBadges.USER
   const RoleIcon = badge.icon
 
+  // Get role-specific dashboard and profile links
+  const getDashboardLink = () => {
+    switch(role) {
+      case "ADMIN": return "/dashboard/admin"
+      case "MANAGER": return "/dashboard/manager"
+      default: return "/dashboard/user"
+    }
+  }
+
+  const getProfileLink = () => {
+    switch(role) {
+      case "ADMIN": return "/dashboard/admin/profile"
+      case "MANAGER": return "/dashboard/manager/profile"
+      default: return "/dashboard/user/profile"
+    }
+  }
+
   // Safely handle the avatar source
   const avatarSrc = session.user.avatar || session.user.image || undefined
   
@@ -145,6 +161,8 @@ export function UserMenu() {
   }
 
   const initials = getInitials()
+  const dashboardLink = getDashboardLink()
+  const profileLink = getProfileLink()
 
   return (
     <DropdownMenu>
@@ -216,30 +234,55 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        {/* Role-Based Menu Items */}
+        {/* Primary Navigation - Dashboard & Profile (ONLY ONCE) */}
         <DropdownMenuGroup>
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <DropdownMenuItem key={item.href} asChild>
-                <Link href={item.href} className="cursor-pointer">
-                  <Icon className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <p className="text-sm">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                  {item.badge && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              </DropdownMenuItem>
-            )
-          })}
+          <DropdownMenuItem asChild>
+            <Link href={dashboardLink} className="cursor-pointer">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              <span>Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={profileLink} className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
+
+        {/* Role-Based Menu Items (All other features) */}
+        {menuItems.length > 0 && (
+          <>
+            <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
+              {role === "ADMIN" ? "Administration" : 
+               role === "MANAGER" ? "Management" : "Your Account"}
+            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link href={item.href} className="cursor-pointer">
+                      <Icon className="mr-2 h-4 w-4" />
+                      <div className="flex-1">
+                        <p className="text-sm">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">{item.description}</p>
+                      </div>
+                      {item.badge && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        )}
 
         {/* Common Menu Items */}
         <DropdownMenuGroup>
