@@ -25,7 +25,62 @@ import {
   Moon,
   Heart,
   ShoppingBag,
-  Loader2
+  Loader2,
+  Store,
+  Activity,
+  Shield,
+  TrendingUp,
+  MessageSquare,
+  Calendar,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  DollarSign,
+  Truck,
+  Tag,
+  Star,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Edit,
+  Trash2,
+  PlusCircle,
+  MinusCircle,
+  Lock,
+  Unlock,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Link2,
+  Image,
+  Video,
+  Camera,
+  Printer,
+  BookOpen,
+  Award,
+  ThumbsUp,
+  ThumbsDown,
+  Flag,
+  Filter,
+  SortAsc,
+  SortDesc,
+  MoreHorizontal,
+  MoreVertical,
+  Copy,
+  RefreshCw,
+  Save,
+  Send,
+  Reply,
+  Forward,
+  Inbox,
+  Archive,
+  Trash,
+  AlertTriangle,
+  Info,
+  HelpCircle as Help
 } from "lucide-react"
 
 import { Button } from "../../../ui/button"
@@ -38,6 +93,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
 } from "../../../ui/dropdown-menu"
 
 import { useToast } from "@/src/app/hooks/use-toast"
@@ -58,6 +122,176 @@ interface DesktopNavProps {
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
 }
+
+// User-specific dropdown items
+const userMenuItems = [
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: BarChart3,
+    description: "View your dashboard"
+  },
+  {
+    label: "Profile",
+    href: "dashboard/user/profile",
+    icon: User,
+    description: "Manage your profile"
+  },
+  {
+    label: "Favorites",
+    href: "dashboard/user/favorites",
+    icon: Heart,
+    description: "Your favorite items",
+    badge: "3"
+  },
+  {
+    label: "Orders",
+    href: "dashboard/user/orders",
+    icon: ShoppingBag,
+    description: "Track your orders",
+    badge: "2"
+  },
+  {
+    label: "Reviews",
+    href: "dashboard/user/reviews",
+    icon: Star,
+    description: "Your reviews"
+  },
+  {
+    label: "Wishlist",
+    href: "dashboard/user/wishlist",
+    icon: Heart,
+    description: "Your wishlist"
+  }
+]
+
+// Manager-specific dropdown items
+const managerMenuItems = [
+  {
+    label: "Dashboard",
+    href: "dashboard/manager",
+    icon: BarChart3,
+    description: "Manager dashboard"
+  },
+  {
+    label: "Profile",
+    href: "dashboard/manager/profile",
+    icon: User,
+    description: "Your profile"
+  },
+  {
+    label: "Products",
+    href: "dashboard/manager/products",
+    icon: Package,
+    description: "Manage products",
+    badge: "12"
+  },
+  {
+    label: "Inventory",
+    href: "dashboard/manager/inventory",
+    icon: Store,
+    description: "Stock management",
+    badge: "Low stock"
+  },
+  {
+    label: "Orders",
+    href: "dashboard/manager/orders",
+    icon: ShoppingBag,
+    description: "Manage orders",
+    badge: "5"
+  },
+  {
+    label: "Categories",
+    href: "dashboard/manager/categories",
+    icon: Tag,
+    description: "Product categories"
+  },
+  {
+    label: "Reports",
+    href: "dashboard/manager/reports",
+    icon: FileSpreadsheet,
+    description: "Sales reports"
+  },
+  {
+    label: "Staff",
+    href: "dashboard/manager/staff",
+    icon: Users,
+    description: "Manage staff"
+  }
+]
+
+// Admin-specific dropdown items
+const adminMenuItems = [
+  {
+    label: "Dashboard",
+    href: "dashboard/admin",
+    icon: BarChart3,
+    description: "Admin dashboard"
+  },
+  {
+    label: "Profile",
+    href: "dashboard/admin/profile",
+    icon: User,
+    description: "Your profile"
+  },
+  {
+    label: "Users",
+    href: "dashboard/admin/users",
+    icon: Users,
+    description: "Manage users",
+    badge: "156"
+  },
+  {
+    label: "Products",
+    href: "dashboard/admin/products",
+    icon: Package,
+    description: "Manage products",
+    badge: "89"
+  },
+  {
+    label: "Orders",
+    href: "dashboard/admin/orders",
+    icon: ShoppingBag,
+    description: "Manage orders",
+    badge: "23"
+  },
+  {
+    label: "Analytics",
+    href: "dashboard/admin/analytics",
+    icon: TrendingUp,
+    description: "View analytics"
+  },
+  {
+    label: "Settings",
+    href: "dashboard/admin/settings",
+    icon: Settings,
+    description: "System settings"
+  },
+  {
+    label: "Payments",
+    href: "dashboard/admin/payments",
+    icon: DollarSign,
+    description: "Payment management"
+  },
+  {
+    label: "Blog",
+    href: "dashboard/admin/blog",
+    icon: FileText,
+    description: "Manage blog posts"
+  },
+  {
+    label: "Support",
+    href: "dashboard/admin/support",
+    icon: HelpCircle,
+    description: "Customer support"
+  },
+  {
+    label: "Reports",
+    href: "dashboard/admin/reports",
+    icon: FileSpreadsheet,
+    description: "System reports"
+  }
+]
 
 export function DesktopNav({ 
   routes, 
@@ -108,6 +342,52 @@ export function DesktopNav({
       .toUpperCase()
       .slice(0, 2)
   }
+
+  // Get role-specific menu items
+  const getRoleSpecificMenu = () => {
+    const role = session?.user?.role
+    
+    switch(role) {
+      case "ADMIN":
+        return adminMenuItems
+      case "MANAGER":
+        return managerMenuItems
+      case "USER":
+      default:
+        return userMenuItems
+    }
+  }
+
+  // Get role-specific icon and color
+  const getRoleBadge = () => {
+    const role = session?.user?.role
+    
+    switch(role) {
+      case "ADMIN":
+        return { 
+          icon: Shield, 
+          color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
+          label: "Administrator"
+        }
+      case "MANAGER":
+        return { 
+          icon: Activity, 
+          color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+          label: "Manager"
+        }
+      case "USER":
+      default:
+        return { 
+          icon: User, 
+          color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+          label: "User"
+        }
+    }
+  }
+
+  const roleSpecificMenu = getRoleSpecificMenu()
+  const roleBadge = getRoleBadge()
+  const RoleIcon = roleBadge.icon
 
   return (
     <div className="hidden md:flex items-center gap-6">
@@ -199,73 +479,110 @@ export function DesktopNav({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {session.user?.name}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {session.user?.email}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground mt-1">
-                    Role: {session.user?.role}
-                  </p>
+            <DropdownMenuContent align="end" className="w-80">
+              {/* User Info Header */}
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-3 p-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage 
+                      src={session.user?.image || session.user?.avatar} 
+                      alt={session.user?.name} 
+                    />
+                    <AvatarFallback className="text-lg">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium leading-none">
+                        {session.user?.name}
+                      </p>
+                      <Badge variant="outline" className={`text-xs ${roleBadge.color}`}>
+                        <RoleIcon className="h-3 w-3 mr-1" />
+                        {roleBadge.label}
+                      </Badge>
+                    </div>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {session.user?.email}
+                    </p>
+                  </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              
-              {/* FIXED: Common menu items with correct routes */}
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="flex items-center cursor-pointer w-full">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Dashboard
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                {/* FIXED: Changed from /profile to /user/profile */}
-                <Link href="/user/profile" className="flex items-center cursor-pointer w-full">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                {/* FIXED: Changed from /favorites to /dashboard/favorites */}
-                <Link href="/dashboard/favorites" className="flex items-center cursor-pointer w-full">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Favorites
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                {/* FIXED: Changed from /orders to /dashboard/orders */}
-                <Link href="/dashboard/orders" className="flex items-center cursor-pointer w-full">
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Orders
-                </Link>
-              </DropdownMenuItem>
 
-              {/* Admin menu items - only visible to admins */}
-              {session.user?.role === "ADMIN" && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center cursor-pointer w-full">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin Panel
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              )}
-              
               <DropdownMenuSeparator />
-              
+
+              {/* Quick Actions */}
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href={session.user?.role === "ADMIN" ? "/admin" : "/dashboard"} className="cursor-pointer">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                    <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/user/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                    <DropdownMenuShortcut>⌘P</DropdownMenuShortcut>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              {/* Role-Specific Menu Items */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {session.user?.role === "ADMIN" ? "Administration" : 
+                 session.user?.role === "MANAGER" ? "Management" : "Your Account"}
+              </DropdownMenuLabel>
+
+              <DropdownMenuGroup>
+                {roleSpecificMenu.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className="cursor-pointer justify-between">
+                        <div className="flex items-center">
+                          <Icon className="mr-2 h-4 w-4" />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              {/* Settings & Support */}
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/support" className="cursor-pointer">
+                    <Help className="mr-2 h-4 w-4" />
+                    <span>Help & Support</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              {/* Logout */}
               <DropdownMenuItem 
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="text-red-600 focus:text-red-600 cursor-pointer"
+                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20 cursor-pointer"
               >
                 {isLoggingOut ? (
                   <>
@@ -276,6 +593,7 @@ export function DesktopNav({
                   <>
                     <LogOut className="mr-2 h-4 w-4" />
                     Log out
+                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                   </>
                 )}
               </DropdownMenuItem>
