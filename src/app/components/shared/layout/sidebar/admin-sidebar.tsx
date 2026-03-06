@@ -118,7 +118,7 @@ export function AdminSidebar() {
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={session.user.image || session.user.avatar} alt={session.user.name} />
+              <AvatarImage src={session.user.image || session.user.avatar || ""} alt={session.user.name || ""} />
               <AvatarFallback>
                 {session.user.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
