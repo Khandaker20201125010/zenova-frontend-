@@ -67,21 +67,21 @@ api.interceptors.response.use(
       "/auth/social-login",
       "/auth/refresh-token",
       "/auth/logout",
+      "/auth/me",
     ];
 
     const isAuthEndpoint = authEndpoints.some((endpoint) =>
       originalRequest?.url?.includes(endpoint),
     );
 
-    // If it's an auth endpoint, just reject
     if (isAuthEndpoint) {
       return Promise.reject(error);
     }
 
     // Handle 401 errors
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If we're already refreshing, queue this request
       if (isRefreshing) {
-        // If refreshing already, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -96,87 +96,64 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const session = await getSession();
-        console.log("Session for refresh:", session);
-
-        if (session?.refreshToken) {
-          console.log("Attempting to refresh token...");
-
-          // Get the refresh token from session
-          const refreshToken = session.refreshToken;
-
-          // Try multiple approaches
-          let refreshResponse;
-          let lastError;
-
-          // Approach 1: Send in body (most common)
-          try {
-            console.log("Trying refresh with body...");
-            refreshResponse = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
-              { refreshToken }, // Send in body
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                withCredentials: true,
-              }
-            );
-            console.log("Refresh with body successful:", refreshResponse.data);
-          } catch (err) {
-            lastError = err;
-            console.log("Refresh with body failed, trying with cookie only...");
-            
-            // Approach 2: Try with empty body (cookie only)
-            try {
-              refreshResponse = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
-                {}, // Empty body - rely on cookie
-                {
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  withCredentials: true,
-                }
-              );
-              console.log("Refresh with cookie successful:", refreshResponse.data);
-            } catch (err2) {
-              lastError = err2;
-              throw lastError;
-            }
+        console.log("Attempting to refresh token...");
+        
+        const refreshResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+          {},
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            withCredentials: true,
           }
+        );
 
-          if (refreshResponse.data.success) {
-            const newToken =
-              refreshResponse.data.data?.token || refreshResponse.data.data?.accessToken;
+        console.log("Refresh response:", refreshResponse.data);
 
-            if (newToken) {
-              console.log("Token refreshed successfully");
-              
-              // Update the original request with new token
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        if (refreshResponse.data.success) {
+          const newToken = refreshResponse.data.data?.token;
 
-              // Process queued requests
-              processQueue(null, newToken);
-              return api(originalRequest);
-            }
+          if (newToken) {
+            console.log("Token refreshed successfully");
+            
+            // Update the original request with new token
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+            // Process queued requests
+            processQueue(null, newToken);
+            
+            // Return the original request
+            return api(originalRequest);
           }
         }
 
-        // If refresh fails, reject the queue but DON'T sign out automatically
+        // If refresh fails, reject the queue
         console.error("Token refresh failed");
         processQueue(error, null);
         return Promise.reject(error);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         console.error("Token refresh error:", refreshError);
         processQueue(refreshError, null);
+        
+        // Check if the error indicates token is revoked/expired
+        const errorMessage = refreshError.response?.data?.message;
+        if (errorMessage === 'refresh_token_revoked' || 
+            errorMessage === 'refresh_token_expired') {
+          console.log("Token revoked/expired - logging out");
+          
+          // Sign out and redirect to login
+          await signOut({ redirect: false });
+          window.location.href = '/login?session=expired';
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // Handle other errors
+    // Handle 403 errors
     if (error.response?.status === 403) {
       Swal.fire({
         title: "Access Denied",

@@ -203,7 +203,7 @@ export const authOptions: NextAuthOptions = {
 
       // Return previous token if the access token has not expired yet
       if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        console.log("✅ Token still valid, expires in:", Math.round((token.accessTokenExpires - Date.now()) / 1000 / 60), "minutes");
+        // console.log("✅ Token still valid, expires in:", Math.round((token.accessTokenExpires - Date.now()) / 1000 / 60), "minutes");
         return token;
       }
 
