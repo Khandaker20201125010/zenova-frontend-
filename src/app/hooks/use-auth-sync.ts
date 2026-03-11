@@ -11,10 +11,10 @@ export const useAuthSync = () => {
 
   useEffect(() => {
     // Only log in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Auth sync - status:', status);
-      console.log('Auth sync - session:', session);
-    }
+    // if (process.env.NODE_ENV === 'development') {
+    //   console.log('Auth sync - status:', status);
+    //   console.log('Auth sync - session:', session);
+    // }
     
     if (status === 'loading') return;
 

@@ -97,10 +97,10 @@ api.interceptors.response.use(
 
       try {
         const session = await getSession();
-        console.log("Session for refresh:", session);
+        // console.log("Session for refresh:", session);
 
         if (session?.refreshToken) {
-          console.log("Attempting to refresh token...");
+          // console.log("Attempting to refresh token...");
 
           // Get the refresh token from session
           const refreshToken = session.refreshToken;
@@ -111,7 +111,7 @@ api.interceptors.response.use(
 
           // Approach 1: Send in body (most common)
           try {
-            console.log("Trying refresh with body...");
+            // console.log("Trying refresh with body...");
             refreshResponse = await axios.post(
               `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
               { refreshToken }, // Send in body
@@ -122,10 +122,10 @@ api.interceptors.response.use(
                 withCredentials: true,
               }
             );
-            console.log("Refresh with body successful:", refreshResponse.data);
+            // console.log("Refresh with body successful:", refreshResponse.data);
           } catch (err) {
             lastError = err;
-            console.log("Refresh with body failed, trying with cookie only...");
+            // console.log("Refresh with body failed, trying with cookie only...");
             
             // Approach 2: Try with empty body (cookie only)
             try {
@@ -139,7 +139,7 @@ api.interceptors.response.use(
                   withCredentials: true,
                 }
               );
-              console.log("Refresh with cookie successful:", refreshResponse.data);
+              // console.log("Refresh with cookie successful:", refreshResponse.data);
             } catch (err2) {
               lastError = err2;
               throw lastError;
@@ -151,7 +151,7 @@ api.interceptors.response.use(
               refreshResponse.data.data?.token || refreshResponse.data.data?.accessToken;
 
             if (newToken) {
-              console.log("Token refreshed successfully");
+              // console.log("Token refreshed successfully");
               
               // Update the original request with new token
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
