@@ -30,16 +30,16 @@ import { useSession, signOut } from "next-auth/react"
 import { useToast } from "@/src/app/hooks/use-toast"
 
 const adminNavItems = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Users", icon: Users, badge: "12" },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingCart, badge: "5" },
-  { href: "/admin/blog", label: "Blog", icon: FileText },
-  { href: "/admin/categories", label: "Categories", icon: Tag },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/payments", label: "Payments", icon: CreditCard },
-  { href: "/admin/contact", label: "Contact", icon: HelpCircle },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/admin/users", label: "Users", icon: Users, badge: "12" },
+  { href: "/dashboard/admin/products", label: "Products", icon: Package },
+  { href: "/dashboard/admin/orders", label: "Orders", icon: ShoppingCart, badge: "5" },
+  { href: "/dashboard/admin/blog", label: "Blog", icon: FileText },
+  { href: "/dashboard/admin/categories", label: "Categories", icon: Tag },
+  { href: "/dashboard/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/dashboard/admin/contact", label: "Contact", icon: HelpCircle },
+  { href: "/dashboard/admin/settings", label: "Settings", icon: Settings },
 ]
 
 export function AdminSidebar() {
@@ -51,7 +51,7 @@ export function AdminSidebar() {
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const isActive = (href: string) => {
-    if (href === "/admin") {
+    if (href === "/dashboard/admin") {
       return pathname === href
     }
     return pathname.startsWith(href)
@@ -87,7 +87,7 @@ export function AdminSidebar() {
       <div className="p-4 border-b">
         <div className="flex items-center justify-between">
           {!collapsed && (
-            <Link href="/admin" className="flex items-center gap-2">
+            <Link href="/dashboard/admin" className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
                 <span className="text-white font-bold">A</span>
               </div>

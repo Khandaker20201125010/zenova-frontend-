@@ -95,13 +95,13 @@ export const DASHBOARD_NAV_ITEMS = {
     { href: '/dashboard/settings', label: 'Settings', icon: 'Settings' },
   ],
   ADMIN: [
-    { href: '/admin', label: 'Overview', icon: 'LayoutDashboard' },
-    { href: '/admin/users', label: 'Users', icon: 'Users' },
-    { href: '/admin/products', label: 'Products', icon: 'Package' },
-    { href: '/admin/orders', label: 'Orders', icon: 'ShoppingCart' },
-    { href: '/admin/blog', label: 'Blog', icon: 'FileText' },
-    { href: '/admin/analytics', label: 'Analytics', icon: 'BarChart3' },
-    { href: '/admin/settings', label: 'Settings', icon: 'Settings' },
+    { href: '/dashboard/admin', label: 'Overview', icon: 'LayoutDashboard' },
+    { href: '/dashboard/admin/users', label: 'Users', icon: 'Users' },
+    { href: '/dashboard/admin/products', label: 'Products', icon: 'Package' },
+    { href: '/dashboard/admin/orders', label: 'Orders', icon: 'ShoppingCart' },
+    { href: '/dashboard/admin/blog', label: 'Blog', icon: 'FileText' },
+    { href: '/dashboard/admin/analytics', label: 'Analytics', icon: 'BarChart3' },
+    { href: '/dashboard/admin/settings', label: 'Settings', icon: 'Settings' },
   ],
 }
 

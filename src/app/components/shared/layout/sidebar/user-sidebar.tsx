@@ -115,7 +115,7 @@ export function UserSidebar() {
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
             <Avatar>
-               <AvatarImage src={session.user.image || session.user.avatar || ""} alt={session.user.name || ""} />
+              <AvatarImage src={session.user.image || session.user.avatar || ""} alt={session.user.name || ""} />
               <AvatarFallback>
                 {session.user.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -200,8 +200,10 @@ export function UserSidebar() {
               </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/">
-                  <Home className="mr-2 h-4 w-4" />
-                  Home
+                  <div className="flex items-center">
+                    <Home className="mr-2 h-4 w-4" />
+                    Home
+                  </div>
                 </Link>
               </Button>
             </div>
@@ -229,9 +231,9 @@ export function UserSidebar() {
                 <Home className="h-5 w-5" />
               </Link>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleSignOut}
               disabled={isSigningOut}
             >
