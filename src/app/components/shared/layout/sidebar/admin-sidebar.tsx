@@ -189,12 +189,14 @@ export function AdminSidebar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start h-9"
+                  className="w-full justify-start h-9 flex"
                   asChild
                 >
                   <Link href="/">
-                    <Home className="mr-2 h-4 w-4" />
-                    Home
+                    <div className="flex items-center gap-2">
+                      <Home className="mr-2 h-4 w-4" />
+                      Home
+                    </div>
                   </Link>
                 </Button>
               </li>
@@ -206,8 +208,11 @@ export function AdminSidebar() {
                   asChild
                 >
                   <Link href="/user/profile">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
+                    <div className="flex items-center gap-2">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </div>
+
                   </Link>
                 </Button>
               </li>
@@ -219,8 +224,10 @@ export function AdminSidebar() {
                   asChild
                 >
                   <Link href="/notifications">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Notifications
+                    <div className="flex items-center gap-2">
+                      <Bell className="mr-2 h-4 w-4" />
+                      Notifications
+                    </div>
                   </Link>
                 </Button>
               </li>
@@ -258,9 +265,9 @@ export function AdminSidebar() {
                 <Home className="h-5 w-5" />
               </Link>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleSignOut}
               disabled={isSigningOut}
             >
