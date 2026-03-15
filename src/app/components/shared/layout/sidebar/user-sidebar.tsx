@@ -182,20 +182,29 @@ export function UserSidebar() {
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" asChild>
                 <Link href="/products">
-                  <Package className="mr-2 h-4 w-4" />
-                  Shop
+                  <div className="flex items-center">
+                    <Package className="mr-2 h-4 w-4" />
+                    Shop
+                  </div>
+
                 </Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/cart">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Cart
+                  <div className="flex items-center">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Cart
+                  </div>
+
                 </Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/support">
-                  <Bell className="mr-2 h-4 w-4" />
-                  Support
+                  <div className="flex items-center">
+                    <Bell className="mr-2 h-4 w-4" />
+                    Support
+                  </div>
+
                 </Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
