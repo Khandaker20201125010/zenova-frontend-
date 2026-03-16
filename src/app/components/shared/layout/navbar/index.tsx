@@ -115,15 +115,7 @@ export function Navbar() {
             </span>
           </Link>
           
-          {/* Role Badge */}
-          {session?.user && (
-            <Badge variant="outline" className="ml-2 hidden sm:inline-flex">
-              {session.user.role === "ADMIN" && <Shield className="h-3 w-3 mr-1" />}
-              {session.user.role === "MANAGER" && <Activity className="h-3 w-3 mr-1" />}
-              {session.user.role === "USER" && <User className="h-3 w-3 mr-1" />}
-              {session.user.role}
-            </Badge>
-          )}
+          
         </div>
 
         {/* Desktop Navigation */}
