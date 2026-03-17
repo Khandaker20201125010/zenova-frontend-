@@ -1,15 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/api/axios-client.ts
-import axios, {
-  AxiosError,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from "axios";
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { getSession, signOut } from "next-auth/react";
 import Swal from "sweetalert2";
 import { ApiResponse } from "../types";
 
-// Create axios instance
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 30000,
@@ -17,10 +11,9 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true,
+  withCredentials: true, // Optional if strictly using Bearer headers
 });
 
-// Track if we're currently refreshing to prevent multiple refresh attempts
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
@@ -44,23 +37,17 @@ api.interceptors.request.use(
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${session.accessToken}`;
     }
-
     return config;
   },
-  (error: AxiosError) => {
-    return Promise.reject(error);
-  },
+  (error: AxiosError) => Promise.reject(error)
 );
 
 // Response interceptor
 api.interceptors.response.use(
-  (response: AxiosResponse<ApiResponse>) => {
-    return response;
-  },
+  (response: AxiosResponse<ApiResponse>) => response,
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as any;
 
-    // Don't handle auth errors on auth endpoints
     const authEndpoints = [
       "/auth/login",
       "/auth/register",
@@ -70,18 +57,15 @@ api.interceptors.response.use(
     ];
 
     const isAuthEndpoint = authEndpoints.some((endpoint) =>
-      originalRequest?.url?.includes(endpoint),
+      originalRequest?.url?.includes(endpoint)
     );
 
-    // If it's an auth endpoint, just reject
     if (isAuthEndpoint) {
       return Promise.reject(error);
     }
 
-    // Handle 401 errors
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If refreshing already, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -96,79 +80,28 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // Fetching the session natively triggers NextAuth's jwt callback
+        // This will securely grab the newly rotated tokens if the old one expired
         const session = await getSession();
-        // console.log("Session for refresh:", session);
 
-        if (session?.refreshToken) {
-          // console.log("Attempting to refresh token...");
-
-          // Get the refresh token from session
-          const refreshToken = session.refreshToken;
-
-          // Try multiple approaches
-          let refreshResponse;
-          let lastError;
-
-          // Approach 1: Send in body (most common)
-          try {
-            // console.log("Trying refresh with body...");
-            refreshResponse = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
-              { refreshToken }, // Send in body
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                withCredentials: true,
-              }
-            );
-            // console.log("Refresh with body successful:", refreshResponse.data);
-          } catch (err) {
-            lastError = err;
-            // console.log("Refresh with body failed, trying with cookie only...");
-            
-            // Approach 2: Try with empty body (cookie only)
-            try {
-              refreshResponse = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
-                {}, // Empty body - rely on cookie
-                {
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  withCredentials: true,
-                }
-              );
-              // console.log("Refresh with cookie successful:", refreshResponse.data);
-            } catch (err2) {
-              lastError = err2;
-              throw lastError;
-            }
+        // If NextAuth explicitly set a RefreshAccessTokenError, the refresh failed permanently
+        if (!session || (session as any).error === "RefreshAccessTokenError") {
+          await signOut({ redirect: false });
+          if (typeof window !== "undefined") {
+            window.location.href = "/login?error=SessionExpired";
           }
-
-          if (refreshResponse.data.success) {
-            const newToken =
-              refreshResponse.data.data?.token || refreshResponse.data.data?.accessToken;
-
-            if (newToken) {
-              // console.log("Token refreshed successfully");
-              
-              // Update the original request with new token
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
-              // Process queued requests
-              processQueue(null, newToken);
-              return api(originalRequest);
-            }
-          }
+          throw new Error("Session expired. Please log in again.");
         }
 
-        // If refresh fails, reject the queue but DON'T sign out automatically
-        console.error("Token refresh failed");
-        processQueue(error, null);
-        return Promise.reject(error);
+        if (session?.accessToken) {
+          originalRequest.headers.Authorization = `Bearer ${session.accessToken}`;
+          processQueue(null, session.accessToken as string);
+          return api(originalRequest);
+        }
+
+        throw new Error("Failed to retrieve new access token.");
       } catch (refreshError) {
-        console.error("Token refresh error:", refreshError);
+        console.error("Token refresh error via NextAuth:", refreshError);
         processQueue(refreshError, null);
         return Promise.reject(refreshError);
       } finally {
@@ -176,7 +109,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle other errors
     if (error.response?.status === 403) {
       Swal.fire({
         title: "Access Denied",
@@ -187,7 +119,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  },
+  }
 );
 
 export const apiClient = {
@@ -195,49 +127,35 @@ export const apiClient = {
     const response = await api.get<ApiResponse<T>>(url, { params });
     return response.data.data as T;
   },
-
   post: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.post<ApiResponse<T>>(url, data);
     return response.data.data as T;
   },
-
   put: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.put<ApiResponse<T>>(url, data);
     return response.data.data as T;
   },
-
   patch: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.patch<ApiResponse<T>>(url, data);
     return response.data.data as T;
   },
-
   delete: async <T>(url: string): Promise<T> => {
     const response = await api.delete<ApiResponse<T>>(url);
     return response.data.data as T;
   },
-  
   upload: async <T>(url: string, file: File, fieldName = 'file'): Promise<T> => {
     const formData = new FormData();
     formData.append(fieldName, file);
-
     const response = await api.post<ApiResponse<T>>(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data.data as T;
   },
-
   uploadMultiple: async <T>(url: string, files: File[], fieldName = 'files'): Promise<T> => {
     const formData = new FormData();
-    files.forEach(file => {
-      formData.append(fieldName, file);
-    });
-
+    files.forEach(file => { formData.append(fieldName, file); });
     const response = await api.post<ApiResponse<T>>(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data.data as T;
   },

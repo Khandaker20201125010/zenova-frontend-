@@ -1,42 +1,48 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 import { UserRole } from "@/src/app/lib/types";
 
+// Helper to extract expiration time from the backend JWT
+const getJwtExpiry = (token: string) => {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    if (payload && payload.exp) {
+      return payload.exp * 1000; // Convert to milliseconds
+    }
+  } catch (error) {
+    console.error("Error decoding JWT:", error);
+  }
+  return Date.now() + 15 * 60 * 1000; // Fallback to 15 mins
+};
+
 async function refreshAccessToken(token: any) {
   try {
-    console.log("🔄 Refreshing access token...");
-    
+    console.log("🔄 Refreshing access token via NextAuth...");
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": `refreshToken=${token.refreshToken}` // Try to send as cookie
-        },
-        body: JSON.stringify({
-          refreshToken: token.refreshToken, // Also send in body as fallback
-        }),
-        credentials: 'include', // Important for cookies
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: token.refreshToken }),
       }
     );
-
+    
     const data = await response.json();
-    console.log("📡 Refresh token response:", data);
-
-    if (!response.ok) {
+    
+    if (!response.ok || !data.success) {
       throw new Error(data.message || "Failed to refresh token");
     }
 
+    const newAccessToken = data.data?.token || data.data?.accessToken;
+    
     return {
       ...token,
-      accessToken: data.data?.token || data.data?.accessToken,
+      accessToken: newAccessToken,
       refreshToken: data.data?.refreshToken || token.refreshToken,
-      accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+      accessTokenExpires: getJwtExpiry(newAccessToken),
       error: undefined,
     };
   } catch (error) {
@@ -57,8 +63,6 @@ export const authOptions: NextAuthOptions = {
         params: {
           access_type: "offline",
           response_type: "code",
-          // Remove prompt: "consent" to avoid showing account selector every time
-          // prompt: "consent",
         },
       },
     }),
@@ -76,25 +80,16 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          console.log("🔐 Authorizing credentials for:", credentials.email);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
           
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-              }),
-              credentials: 'include', // Important for cookies
-            },
-          );
-
           const data = await res.json();
-          console.log("📡 Login response:", data);
 
           if (res.ok && data.success) {
             return {
@@ -107,10 +102,8 @@ export const authOptions: NextAuthOptions = {
               refreshToken: data.data.refreshToken,
             };
           }
-
           throw new Error(data.message || "Invalid credentials");
         } catch (error) {
-          console.error("❌ Authorize error:", error);
           throw error;
         }
       },
@@ -118,47 +111,29 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async signIn({ user, account, profile }) {
-      console.log("📝 SignIn callback:", { 
-        provider: account?.provider,
-        email: user.email,
-        hasAccount: !!account 
-      });
-      
+    async signIn({ user, account }) {
       if (account?.provider === "google") {
         try {
-          console.log("🔄 Processing Google sign-in for:", user.email);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/social-login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              googleId: account.providerAccountId,
+              avatar: user.image,
+            }),
+          });
           
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/social-login`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: user.email,
-                name: user.name,
-                googleId: account.providerAccountId,
-                avatar: user.image,
-              }),
-              credentials: 'include', // Important for cookies
-            },
-          );
-
           const data = await res.json();
-          console.log("📡 Social login response:", data);
-
+          
           if (res.ok && data.success) {
             user.id = data.data.user.id;
             user.role = data.data.user.role as UserRole;
             user.accessToken = data.data.token;
             user.refreshToken = data.data.refreshToken;
-            
-            console.log("✅ Google sign-in successful, user data updated");
             return true;
           }
-          console.log("❌ Google sign-in failed:", data);
           return false;
         } catch (error) {
           console.error("💥 Google signIn error:", error);
@@ -169,25 +144,8 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-      console.log("🔑 JWT callback:", { 
-        hasUser: !!user, 
-        hasAccount: !!account,
-        tokenExists: !!token,
-        userId: token?.id
-      });
-      
       // Initial sign in
       if (account && user) {
-        console.log("📝 Initial sign in, creating JWT with user data");
-        console.log("User data:", {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          hasAccessToken: !!user.accessToken,
-          hasRefreshToken: !!user.refreshToken
-        });
-        
         return {
           id: user.id,
           email: user.email,
@@ -196,63 +154,41 @@ export const authOptions: NextAuthOptions = {
           avatar: user.avatar,
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
-          accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          accessTokenExpires: getJwtExpiry(user.accessToken as string),
           error: undefined,
         };
       }
 
-      // Return previous token if the access token has not expired yet
-      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        // console.log("✅ Token still valid, expires in:", Math.round((token.accessTokenExpires - Date.now()) / 1000 / 60), "minutes");
+      // Return previous token if the access token has not expired yet (with a 10s buffer)
+      if (token.accessTokenExpires && Date.now() < (token.accessTokenExpires as number) - 10000) {
         return token;
       }
 
-      // Access token has expired, try to update it
-      console.log("⏰ Token expired, attempting refresh");
+      // Access token has expired, let NextAuth update it
       return refreshAccessToken(token);
     },
 
     async session({ session, token }) {
-      console.log("📋 Session callback:", { 
-        hasToken: !!token,
-        hasSession: !!session,
-        tokenId: token?.id,
-        tokenRole: token?.role
-      });
-      
       if (session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.email = token.email || '';
         session.user.name = token.name || '';
-        session.user.role = token.role;
-        session.user.avatar = token.avatar;
-        session.user.accessToken = token.accessToken;
-        session.user.refreshToken = token.refreshToken;
+        session.user.role = token.role as UserRole;
+        session.user.avatar = token.avatar as string;
+        session.user.accessToken = token.accessToken as string;
+        session.user.refreshToken = token.refreshToken as string;
       }
       
-      session.accessToken = token.accessToken;
-      session.refreshToken = token.refreshToken;
+      session.accessToken = token.accessToken as string;
+      session.refreshToken = token.refreshToken as string;
       session.error = token.error;
-      
-      console.log("✅ Session created:", {
-        userId: session.user?.id,
-        email: session.user?.email,
-        role: session.user?.role,
-        hasAccessToken: !!session.accessToken,
-        hasRefreshToken: !!session.refreshToken
-      });
       
       return session;
     },
 
     async redirect({ url, baseUrl }) {
-      // console.log("↪️ Redirect callback:", { url, baseUrl });
-      
-      // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url;
-      
       return baseUrl;
     },
   },
@@ -261,92 +197,10 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/auth/error",
     verifyRequest: "/auth/verify-request",
-    // newUser: "/register" // Uncomment if you want to redirect new users to register
   },
-
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
-  },
-
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax", // Changed from 'strict' to 'lax' for better compatibility
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-    pkceCodeVerifier: {
-      name: `next-auth.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 900,
-      },
-    },
-    state: {
-      name: `next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 900,
-      },
-    },
-    nonce: {
-      name: `next-auth.nonce`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
-
-  debug: true, // Set to true for debugging, false in production
+  
+  session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
-
-  // Enable logger
-  logger: {
-    error(code, ...message) {
-      console.error('next-auth error:', code, ...message);
-    },
-    warn(code, ...message) {
-      console.warn('next-auth warning:', code, ...message);
-    },
-    debug(code, ...message) {
-      console.log('next-auth debug:', code, ...message);
-    },
-  },
 };
 
 const handler = NextAuth(authOptions);

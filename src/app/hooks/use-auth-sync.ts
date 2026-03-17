@@ -1,6 +1,5 @@
-// hooks/use-auth-sync.ts
 import { useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react'; // Added signOut
 import { useAuthStore } from '../store/auth-store';
 import type { User, UserRole } from '../lib/types';
 
@@ -10,14 +9,17 @@ export const useAuthSync = () => {
   const hasInitialized = useRef(false);
 
   useEffect(() => {
-    // Only log in development
-    // if (process.env.NODE_ENV === 'development') {
-    //   console.log('Auth sync - status:', status);
-    //   console.log('Auth sync - session:', session);
-    // }
-    
     if (status === 'loading') return;
 
+    // 1. CHECK FOR REFRESH ERRORS (AUTOMATIC LOGOUT)
+    if (session?.error === "RefreshAccessTokenError") {
+      console.warn("Session expired detected. Logging out...");
+      logout(); // Clear Zustand store
+      signOut({ callbackUrl: '/login?error=SessionExpired' }); // Clear NextAuth session
+      return;
+    }
+
+    // 2. HANDLE AUTHENTICATED STATE
     if (status === 'authenticated' && session?.user) {
       const user: User = {
         id: session.user.id,
@@ -38,8 +40,10 @@ export const useAuthSync = () => {
       }
       
       hasInitialized.current = true;
-    } else if (status === 'unauthenticated' && hasInitialized.current) {
-      // Only logout if we were previously authenticated
+    } 
+    
+    // 3. HANDLE EXPLICIT UNAUTHENTICATED STATE
+    else if (status === 'unauthenticated' && hasInitialized.current) {
       logout();
       hasInitialized.current = false;
     }

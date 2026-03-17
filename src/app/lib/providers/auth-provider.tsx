@@ -1,4 +1,3 @@
-// lib/providers/auth-provider.tsx
 "use client"
 
 import { SessionProvider } from "next-auth/react"
@@ -13,8 +12,10 @@ function AuthSync({ children }: { children: React.ReactNode }) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <SessionProvider 
-      refetchInterval={0} // Don't refetch automatically
-      refetchOnWindowFocus={false}
+      // Check every 5 minutes (300 seconds)
+      refetchInterval={300} 
+      // Recommended: check when the user returns to the tab
+      refetchOnWindowFocus={true} 
       refetchWhenOffline={false}
     >
       <AuthSync>{children}</AuthSync>
