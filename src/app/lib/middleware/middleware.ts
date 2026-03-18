@@ -6,56 +6,36 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    const userRole = (token?.role as string)?.toUpperCase();
 
-    if (!token) {
+    // 1. Protect Admin Pages
+    if (path.startsWith("/dashboard/admin")) {
+      if (userRole !== "ADMIN") {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
       return NextResponse.next();
     }
 
-    const userRole = token.role as string;
+    // 2. Protect User Pages from Admins
+    // Add every path here that an ADMIN should never see
+    const userSpecificPaths = [
+      "/dashboard/user",
+      "/dashboard/user/profile",
+      "/dashboard/user/my-orders"
+      
+    ];
 
+    const isUserOnlyPath = userSpecificPaths.some(p => path.startsWith(p)) || path === "/dashboard";
 
-    const isAdminRoute = path.startsWith('/dashboard/admin');
-    
-
-    const isUserDashboardRoute = path.startsWith('/dashboard') && !isAdminRoute;
-    const isUserProfileRoute = path.startsWith('/user');
-
-   
-    if (isAdminRoute && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+    if (isUserOnlyPath && userRole === "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard/admin", req.url));
     }
 
-   
-    if ((isUserDashboardRoute || isUserProfileRoute) && userRole === 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard/admin', req.url));
-    }
-
-  
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        
-        // Define public routes
-        const publicRoutes = ['/', '/login', '/register', '/about', '/contact', '/api/auth'];
-        const isPublic = publicRoutes.some(route => 
-          path === route || path.startsWith(route + '/')
-        );
-
-        if (isPublic) return true;
-
-     
-        return !!token;
-      },
+      authorized: ({ token }) => !!token,
     },
   }
 );
-
-export const config = {
-  matcher: [
-  
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-  ],
-};

@@ -90,7 +90,7 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!validateForm()) return
@@ -99,11 +99,12 @@ export default function LoginPage() {
     setErrors({})
 
     try {
+      // 1. Perform the sign-in
+      // We set redirect: false so we can inspect the result before moving
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
-        callbackUrl,
       })
 
       if (result?.error) {
@@ -112,22 +113,37 @@ export default function LoginPage() {
           description: result.error,
           variant: "destructive",
         })
-      } else if (result?.url) {
-        router.push(result.url)
       } else {
-        router.push(callbackUrl)
+        // 2. Fetch the session immediately to see the user's role
+        // This prevents the middleware from seeing an "empty" role during the first redirect
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        const role = session?.user?.role?.toUpperCase();
+
+        toast({
+          title: "Success",
+          description: "Logged in successfully",
+        })
+
+        // 3. Smart Redirect based on Role
+        if (role === "ADMIN") {
+          router.push("/dashboard/admin");
+        } else {
+          router.push("/dashboard");
+        }
+        
+        router.refresh(); // Force refresh to update the middleware state
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong.",
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
     }
   }
-
   const handleDemoLogin = () => {
     setEmail("demo@example.com")
     setPassword("demo123")
