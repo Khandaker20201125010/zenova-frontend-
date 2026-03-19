@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/src/app/components/ui/button"
 import { Input } from "@/src/app/components/ui/input"
-import { Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/app/components/ui/card"
 import {
     Select,
@@ -13,35 +13,23 @@ import {
     SelectValue,
 } from "@/src/app/components/ui/select"
 import { useToast } from "@/src/app/hooks/use-toast"
-import { Order } from "@/src/app/lib/types"
-import { ordersApi } from "@/src/app/lib/api/orders"
-import { OrdersTable } from "@/src/app/components/dashboard/tables/orders-table"
+import { Product } from "@/src/app/lib/types"
+import { ProductFilters, productsApi } from "@/src/app/lib/api/products"
+import { ProductsTable } from "@/src/app/components/dashboard/tables/products-table"
 
 
-// Define OrderFilters interface
-export interface OrderFilters {
-    page?: number
-    limit?: number
-    search?: string
-    status?: string
-    paymentStatus?: string
-    startDate?: string
-    endDate?: string
-    sortBy?: string
-    sortOrder?: 'asc' | 'desc'
-}
-
-export default function AdminOrdersPage() {
-    const [orders, setOrders] = useState<Order[]>([])
+export default function AdminProductsPage() {
+    const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
-    const [filters, setFilters] = useState<OrderFilters>({
+    const [filters, setFilters] = useState<ProductFilters>({
         page: 1,
         limit: 10,
         search: "",
-        status: "",
-        paymentStatus: "",
-        startDate: "",
-        endDate: "",
+        category: "",
+        inStock: undefined,
+        isFeatured: undefined,
+        sortBy: "createdAt",
+        sortOrder: "desc",
     })
     const [pagination, setPagination] = useState({
         page: 1,
@@ -52,14 +40,15 @@ export default function AdminOrdersPage() {
     const { toast } = useToast()
 
     useEffect(() => {
-        fetchOrders()
+        fetchProducts()
     }, [filters])
 
-    const fetchOrders = async () => {
+    const fetchProducts = async () => {
         try {
             setLoading(true)
-            const response = await ordersApi.getAllOrders(filters.page, filters.limit, filters)
-            setOrders(response.orders)
+            const response = await productsApi.getProducts(filters)
+            // Fix: Access data property correctly
+            setProducts(response.products)
             setPagination({
                 page: response.page,
                 limit: response.limit,
@@ -69,7 +58,7 @@ export default function AdminOrdersPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to load orders",
+                description: "Failed to load products",
                 variant: "destructive",
             })
         } finally {
@@ -79,20 +68,26 @@ export default function AdminOrdersPage() {
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
+            <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold tracking-tight">Products</h2>
+                <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Product
+                </Button>
+            </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>All Orders</CardTitle>
+                    <CardTitle>All Products</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {/* Filters */}
-                    <div className="flex flex-wrap gap-4 mb-6">
-                        <div className="flex-1 min-w-[200px]">
+                    <div className="flex flex-col md:flex-row gap-4 mb-6">
+                        <div className="flex-1">
                             <div className="relative">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search orders..."
+                                    placeholder="Search products..."
                                     className="pl-8"
                                     value={filters.search}
                                     onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
@@ -100,46 +95,53 @@ export default function AdminOrdersPage() {
                             </div>
                         </div>
                         <Select
-                            value={filters.status || "all"}
-                            onValueChange={(value) => setFilters({ ...filters, status: value === "all" ? "" : value, page: 1 })}
+                            value={filters.inStock?.toString() || "all"}
+                            onValueChange={(value) =>
+                                setFilters({
+                                    ...filters,
+                                    inStock: value === "all" ? undefined : value === "true",
+                                    page: 1
+                                })
+                            }
                         >
                             <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Order Status" />
+                                <SelectValue placeholder="Stock Status" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All</SelectItem>
-                                <SelectItem value="PENDING">Pending</SelectItem>
-                                <SelectItem value="PROCESSING">Processing</SelectItem>
-                                <SelectItem value="SHIPPED">Shipped</SelectItem>
-                                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                <SelectItem value="true">In Stock</SelectItem>
+                                <SelectItem value="false">Out of Stock</SelectItem>
                             </SelectContent>
                         </Select>
 
                         <Select
-                            value={filters.paymentStatus || "all"}
-                            onValueChange={(value) => setFilters({ ...filters, paymentStatus: value === "all" ? "" : value, page: 1 })}
+                            value={filters.isFeatured?.toString() || "all"}
+                            onValueChange={(value) =>
+                                setFilters({
+                                    ...filters,
+                                    isFeatured: value === "all" ? undefined : value === "true",
+                                    page: 1
+                                })
+                            }
                         >
                             <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Payment Status" />
+                                <SelectValue placeholder="Featured" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All</SelectItem>
-                                <SelectItem value="PENDING">Pending</SelectItem>
-                                <SelectItem value="PAID">Paid</SelectItem>
-                                <SelectItem value="FAILED">Failed</SelectItem>
-                                <SelectItem value="REFUNDED">Refunded</SelectItem>
+                                <SelectItem value="true">Featured</SelectItem>
+                                <SelectItem value="false">Not Featured</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {/* Data Table */}
-                    <OrdersTable
-                        data={orders}
+                    <ProductsTable
+                        data={products}
                         loading={loading}
                         pagination={pagination}
                         onPageChange={(page) => setFilters({ ...filters, page })}
-                        onRefresh={fetchOrders}
+                        onRefresh={fetchProducts}
                     />
                 </CardContent>
             </Card>

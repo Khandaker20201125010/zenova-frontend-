@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// components/dashboard/tables/users-table.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
     ColumnDef,
@@ -58,215 +57,302 @@ import { Button } from "../../ui/button"
 import { useToast } from "@/src/app/hooks/use-toast"
 import { formatDate } from "@/src/app/lib/utils/helpers"
 import { usersApi } from "@/src/app/lib/api/users"
+import { User } from "@/src/app/lib/types"
+import { Skeleton } from "../../ui/skeleton"
 
 interface UserTableProps {
-    data: any[]
+    data: User[]
+    loading?: boolean
+    pagination: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+    onPageChange: (page: number) => void
     onRefresh: () => void
 }
 
-export function UsersTable({ data, onRefresh }: UserTableProps) {
+export function UsersTable({ 
+    data, 
+    loading = false,
+    pagination,
+    onPageChange,
+    onRefresh 
+}: UserTableProps) {
     const router = useRouter()
     const { toast } = useToast()
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [rowSelection, setRowSelection] = useState({})
 
-    const columns: ColumnDef<any>[] = [
-        {
-            id: "select",
-            header: ({ table }) => (
-                <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
-                    checked={table.getIsAllPageRowsSelected()}
-                    onChange={table.getToggleAllPageRowsSelectedHandler()}
-                />
-            ),
-            cell: ({ row }) => (
-                <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
-                    checked={row.getIsSelected()}
-                    onChange={row.getToggleSelectedHandler()}
-                />
-            ),
-            enableSorting: false,
-            enableHiding: false,
-        },
-        {
-            accessorKey: "user",
-            header: "User",
-            cell: ({ row }) => {
-                const user = row.original
-                return (
-                    <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>
-                                {user.name?.split(" ").map((n: any) => n[0]).join("")}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
+    // Define the select header component separately to avoid table reference issues
+    const SelectHeader = useCallback(({ table }: any) => {
+        // Comprehensive check for table and its methods
+        if (!table) {
+            return <input type="checkbox" className="rounded border-gray-300" disabled />
+        }
+
+        // Try to safely get the selection state with error handling
+        let isAllSelected = false
+        let toggleAllHandler = undefined
+
+        try {
+            // Check if the method exists and is callable
+            if (typeof table.getIsAllPageRowsSelected === 'function') {
+                isAllSelected = table.getIsAllPageRowsSelected() ?? false
+            }
+            
+            if (typeof table.getToggleAllPageRowsSelectedHandler === 'function') {
+                toggleAllHandler = table.getToggleAllPageRowsSelectedHandler()
+            }
+        } catch (error) {
+            // If any error occurs, return a disabled checkbox
+            console.debug('Table selection methods not ready yet')
+            return <input type="checkbox" className="rounded border-gray-300" disabled />
+        }
+        
+        return (
+            <input
+                type="checkbox"
+                className="rounded border-gray-300"
+                checked={isAllSelected}
+                onChange={toggleAllHandler}
+            />
+        )
+    }, [])
+
+    // Define the select cell component separately
+    const SelectCell = useCallback(({ row }: any) => {
+        // Comprehensive check for row and its methods
+        if (!row) {
+            return <input type="checkbox" className="rounded border-gray-300" disabled />
+        }
+
+        // Try to safely get the selection state with error handling
+        let isSelected = false
+        let toggleHandler = undefined
+
+        try {
+            // Check if the method exists and is callable
+            if (typeof row.getIsSelected === 'function') {
+                isSelected = row.getIsSelected() ?? false
+            }
+            
+            if (typeof row.getToggleSelectedHandler === 'function') {
+                toggleHandler = row.getToggleSelectedHandler()
+            }
+        } catch (error) {
+            // If any error occurs, return a disabled checkbox
+            console.debug('Row selection methods not ready yet')
+            return <input type="checkbox" className="rounded border-gray-300" disabled />
+        }
+        
+        return (
+            <input
+                type="checkbox"
+                className="rounded border-gray-300"
+                checked={isSelected}
+                onChange={toggleHandler}
+            />
+        )
+    }, [])
+
+    // Memoize columns to prevent unnecessary re-renders
+    const columns = useMemo<ColumnDef<User>[]>(
+        () => [
+            {
+                id: "select",
+                header: SelectHeader,
+                cell: SelectCell,
+                enableSorting: false,
+                enableHiding: false,
+            },
+            {
+                accessorKey: "name",
+                header: "User",
+                cell: ({ row }) => {
+                    const user = row.original
+                    if (!user) return null
+                    return (
+                        <div className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={user.avatar} />
+                                <AvatarFallback>
+                                    {user.name?.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-medium">{user.name}</p>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                            </div>
                         </div>
-                    </div>
-                )
+                    )
+                },
             },
-        },
-        {
-            accessorKey: "role",
-            header: "Role",
-            cell: ({ row }) => {
-                const role = row.getValue("role") as string
-                return (
-                    <Badge
-                        variant={
-                            role === "ADMIN" ? "destructive" :
-                                role === "MANAGER" ? "secondary" : "outline"
-                        }
-                    >
-                        {role}
-                    </Badge>
-                )
+            {
+                accessorKey: "email",
+                header: "Email",
+                cell: ({ row }) => {
+                    return <span className="text-sm">{row.getValue("email")}</span>
+                },
             },
-        },
-        {
-            accessorKey: "status",
-            header: "Status",
-            cell: ({ row }) => {
-                const status = row.getValue("status") as string
-                return (
-                    <Badge
-                        variant={
-                            status === "ACTIVE" ? "success" :
-                                status === "SUSPENDED" ? "destructive" : "secondary"
-                        }
-                    >
-                        {status}
-                    </Badge>
-                )
+            {
+                accessorKey: "role",
+                header: "Role",
+                cell: ({ row }) => {
+                    const role = row.getValue("role") as string
+                    return (
+                        <Badge
+                            variant={
+                                role === "ADMIN" ? "destructive" :
+                                    role === "MANAGER" ? "secondary" : "outline"
+                            }
+                        >
+                            {role}
+                        </Badge>
+                    )
+                },
             },
-        },
-        {
-            accessorKey: "emailVerified",
-            header: "Verified",
-            cell: ({ row }) => {
-                const verified = row.getValue("emailVerified") as boolean
-                return (
-                    <Badge variant={verified ? "success" : "secondary"}>
-                        {verified ? "Yes" : "No"}
-                    </Badge>
-                )
+            {
+                accessorKey: "status",
+                header: "Status",
+                cell: ({ row }) => {
+                    const status = row.getValue("status") as string
+                    return (
+                        <Badge
+                            variant={
+                                status === "ACTIVE" ? "success" :
+                                    status === "SUSPENDED" ? "destructive" : "secondary"
+                            }
+                        >
+                            {status}
+                        </Badge>
+                    )
+                },
             },
-        },
-        {
-            accessorKey: "createdAt",
-            header: "Joined",
-            cell: ({ row }) => {
-                return formatDate(row.getValue("createdAt"), "MMM dd, yyyy")
+            {
+                accessorKey: "emailVerified",
+                header: "Verified",
+                cell: ({ row }) => {
+                    const verified = row.getValue("emailVerified") as boolean
+                    return (
+                        <Badge variant={verified ? "success" : "secondary"}>
+                            {verified ? "Yes" : "No"}
+                        </Badge>
+                    )
+                },
             },
-        },
-        {
-            accessorKey: "lastLogin",
-            header: "Last Login",
-            cell: ({ row }) => {
-                const lastLogin = row.original.lastLogin
-                return lastLogin ? formatDate(lastLogin, "MMM dd, yyyy") : "Never"
+            {
+                accessorKey: "createdAt",
+                header: "Joined",
+                cell: ({ row }) => {
+                    return formatDate(row.getValue("createdAt"), "MMM dd, yyyy")
+                },
             },
-        },
-        {
-            id: "actions",
-            cell: ({ row }) => {
-                const user = row.original
+            {
+                accessorKey: "lastLogin",
+                header: "Last Login",
+                cell: ({ row }) => {
+                    const lastLogin = row.original.lastLogin
+                    return lastLogin ? formatDate(lastLogin, "MMM dd, yyyy") : "Never"
+                },
+            },
+            {
+                id: "actions",
+                cell: ({ row }) => {
+                    const user = row.original
+                    if (!user) return null
 
-                const handleEdit = () => {
-                    router.push(`/admin/users/${user.id}`)
-                }
+                    const handleEdit = () => {
+                        router.push(`/admin/users/${user.id}`)
+                    }
 
-                const handleDelete = async () => {
-                    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+                    const handleDelete = async () => {
+                        if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+                            try {
+                                await usersApi.deleteUser(user.id)
+                                toast({
+                                    title: "User deleted",
+                                    description: `${user.name} has been deleted`,
+                                })
+                                onRefresh()
+                            } catch (error) {
+                                toast({
+                                    title: "Error",
+                                    description: "Failed to delete user",
+                                    variant: "destructive",
+                                })
+                            }
+                        }
+                    }
+
+                    const handleToggleStatus = async () => {
+                        const newStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"
                         try {
-                            await usersApi.deleteUser(user.id)
+                            await usersApi.updateUserStatus(user.id, newStatus)
                             toast({
-                                title: "User deleted",
-                                description: `${user.name} has been deleted`,
+                                title: "Status updated",
+                                description: `${user.name} is now ${newStatus}`,
                             })
                             onRefresh()
                         } catch (error) {
                             toast({
                                 title: "Error",
                                 description: "Failed to update status",
-                                variant: "error",
+                                variant: "destructive",
                             })
                         }
                     }
-                }
 
-                const handleToggleStatus = async () => {
-                    const newStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"
-                    try {
-                        await usersApi.updateUserStatus(user.id, newStatus)
-                        toast({
-                            title: "Status updated",
-                            description: `${user.name} is now ${newStatus}`,
-                        })
-                        onRefresh()
-                    } catch (error) {
-                        toast({
-                            title: "Error",
-                            description: "Failed to update status",
-                            variant: "error",
-                        })
-                    }
-                }
-
-                return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={handleEdit}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}/orders`)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Orders
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Mail className="mr-2 h-4 w-4" />
-                                Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleToggleStatus}>
-                                {user.status === "ACTIVE" ? (
-                                    <>
-                                        <UserX className="mr-2 h-4 w-4" />
-                                        Suspend User
-                                    </>
-                                ) : (
-                                    <>
-                                        <UserCheck className="mr-2 h-4 w-4" />
-                                        Activate User
-                                    </>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete User
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )
+                    return (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={handleEdit}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}/orders`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Orders
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                    <Mail className="mr-2 h-4 w-4" />
+                                    Send Email
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleToggleStatus}>
+                                    {user.status === "ACTIVE" ? (
+                                        <>
+                                            <UserX className="mr-2 h-4 w-4" />
+                                            Suspend User
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserCheck className="mr-2 h-4 w-4" />
+                                            Activate User
+                                        </>
+                                    )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete User
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )
+                },
             },
-        },
-    ]
+        ],
+        [SelectHeader, SelectCell, router, toast, onRefresh]
+    )
 
     const table = useReactTable({
         data,
@@ -283,7 +369,80 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
             columnFilters,
             rowSelection,
         },
+        manualPagination: true,
+        pageCount: pagination.totalPages,
+        initialState: {
+            pagination: {
+                pageIndex: pagination.page - 1,
+                pageSize: pagination.limit,
+            },
+        },
     })
+
+    // Sync pagination with parent
+    useEffect(() => {
+        if (table && table.getState) {
+            const currentPage = table.getState().pagination.pageIndex + 1
+            if (currentPage !== pagination.page) {
+                table.setPageIndex(pagination.page - 1)
+            }
+        }
+    }, [pagination.page, pagination.limit, table])
+
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-96 w-full" />
+            </div>
+        )
+    }
+
+    // Safe helper functions with proper null checks
+    const getRowModel = () => {
+        try {
+            return table?.getRowModel?.() || { rows: [] }
+        } catch (error) {
+            return { rows: [] }
+        }
+    }
+
+    const getSelectedRowModel = () => {
+        try {
+            return table?.getSelectedRowModel?.() || { rows: [] }
+        } catch (error) {
+            return { rows: [] }
+        }
+    }
+
+    const getFilteredSelectedRowModel = () => {
+        try {
+            return table?.getFilteredSelectedRowModel?.() || { rows: [] }
+        } catch (error) {
+            return { rows: [] }
+        }
+    }
+
+    const getFilteredRowModelFunc = () => {
+        try {
+            return table?.getFilteredRowModel?.() || { rows: [] }
+        } catch (error) {
+            return { rows: [] }
+        }
+    }
+
+    const rowModel = getRowModel()
+    const selectedRowModel = getSelectedRowModel()
+    const filteredSelectedRowModel = getFilteredSelectedRowModel()
+    const filteredRowModel = getFilteredRowModelFunc()
+
+    const rows = rowModel.rows || []
+    const selectedRows = selectedRowModel.rows || []
+    const filteredSelectedRows = filteredSelectedRowModel.rows || []
+    const filteredRows = filteredRowModel.rows || []
+
+    // Get header groups safely
+    const headerGroups = table?.getHeaderGroups?.() || []
 
     return (
         <div className="space-y-4">
@@ -294,18 +453,18 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
                         <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Filter users..."
-                            value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+                            value={(table?.getColumn("name")?.getFilterValue() as string) ?? ""}
                             onChange={(event) =>
-                                table.getColumn("email")?.setFilterValue(event.target.value)
+                                table?.getColumn("name")?.setFilterValue(event.target.value)
                             }
                             className="pl-10 w-64"
                         />
                     </div>
 
                     <Select
-                        value={(table.getColumn("role")?.getFilterValue() as string) ?? "all"}
+                        value={(table?.getColumn("role")?.getFilterValue() as string) ?? ""}
                         onValueChange={(value) =>
-                            table.getColumn("role")?.setFilterValue(value === "all" ? "" : value)
+                            table?.getColumn("role")?.setFilterValue(value === "all" ? "" : value)
                         }
                     >
                         <SelectTrigger className="w-32">
@@ -320,9 +479,9 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
                     </Select>
 
                     <Select
-                        value={(table.getColumn("status")?.getFilterValue() as string) ?? "all"}
+                        value={(table?.getColumn("status")?.getFilterValue() as string) ?? ""}
                         onValueChange={(value) =>
-                            table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
+                            table?.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
                         }
                     >
                         <SelectTrigger className="w-32">
@@ -338,9 +497,9 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {table.getFilteredSelectedRowModel().rows.length > 0 && (
+                    {filteredSelectedRows.length > 0 && (
                         <Button variant="outline" size="sm">
-                            Bulk Actions ({table.getFilteredSelectedRowModel().rows.length})
+                            Bulk Actions ({filteredSelectedRows.length})
                         </Button>
                     )}
                     <Button variant="outline" size="icon">
@@ -353,26 +512,32 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
-                                        </TableHead>
-                                    )
-                                })}
+                        {headerGroups.length > 0 ? (
+                            headerGroups.map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => {
+                                        return (
+                                            <TableHead key={header.id}>
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                            </TableHead>
+                                        )
+                                    })}
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableHead>Loading...</TableHead>
                             </TableRow>
-                        ))}
+                        )}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
+                        {rows.length > 0 ? (
+                            rows.map((row) => (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
@@ -404,41 +569,64 @@ export function UsersTable({ data, onRefresh }: UserTableProps) {
             {/* Pagination */}
             <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                    {table.getFilteredRowModel().rows.length} row(s) selected.
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
+                        onClick={() => onPageChange(pagination.page - 1)}
+                        disabled={pagination.page <= 1}
                     >
                         Previous
                     </Button>
                     <div className="flex items-center gap-1">
-                        {Array.from({ length: table.getPageCount() }, (_, i) => i + 1).map((page) => (
-                            <Button
-                                key={page}
-                                variant={table.getState().pagination.pageIndex + 1 === page ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => table.setPageIndex(page - 1)}
-                            >
-                                {page}
-                            </Button>
-                        ))}
+                        {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                            let pageNum = i + 1
+                            if (pagination.totalPages > 5) {
+                                if (pagination.page > 3) {
+                                    pageNum = pagination.page - 3 + i
+                                }
+                            }
+                            return (
+                                <Button
+                                    key={pageNum}
+                                    variant={pagination.page === pageNum ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => onPageChange(pageNum)}
+                                    disabled={pageNum > pagination.totalPages}
+                                >
+                                    {pageNum}
+                                </Button>
+                            )
+                        })}
+                        {pagination.totalPages > 5 && pagination.page < pagination.totalPages - 2 && (
+                            <>
+                                <span className="px-2">...</span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onPageChange(pagination.totalPages)}
+                                >
+                                    {pagination.totalPages}
+                                </Button>
+                            </>
+                        )}
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
+                        onClick={() => onPageChange(pagination.page + 1)}
+                        disabled={pagination.page >= pagination.totalPages}
                     >
                         Next
                     </Button>
                     <Select
-                        value={table.getState().pagination.pageSize.toString()}
-                        onValueChange={(value) => table.setPageSize(Number(value))}
+                        value={pagination?.limit?.toString() || "10"}
+                        onValueChange={(value) => {
+                            // Handle page size change
+                            console.log("Page size:", value)
+                        }}
                     >
                         <SelectTrigger className="w-20">
                             <SelectValue />

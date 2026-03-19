@@ -50,6 +50,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   stock: number;
+    sku?: string;
   isFeatured: boolean;
   isActive?: boolean;
   isNew?: boolean;
