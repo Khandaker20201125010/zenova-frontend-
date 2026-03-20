@@ -41,27 +41,31 @@ export default function AdminUsersPage() {
     fetchUsers()
   }, [filters])
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true)
-      const response = await usersApi.getAllUsers(filters)
-      setUsers(response.users)
-      setPagination({
-        page: response.page,
-        limit: response.limit,
-        total: response.total,
-        totalPages: response.totalPages,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load users",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+const fetchUsers = async () => {
+  try {
+    setLoading(true)
+    console.log('Fetching users with filters:', filters)
+    const response = await usersApi.getAllUsers(filters)
+    console.log('API Response:', response)
+    
+    setUsers(response.users || [])
+    setPagination({
+      page: response.page || 1,
+      limit: response.limit || 10,
+      total: response.total || 0,
+      totalPages: response.totalPages || 0,
+    })
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    toast({
+      title: "Error",
+      description: "Failed to load users",
+      variant: "destructive",
+    })
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleSearch = (search: string) => {
     setFilters({ ...filters, search, page: 1 })

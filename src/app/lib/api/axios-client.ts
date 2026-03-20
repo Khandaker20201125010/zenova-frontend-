@@ -123,9 +123,9 @@ api.interceptors.response.use(
 );
 
 export const apiClient = {
-  get: async <T>(url: string, params?: any): Promise<T> => {
+  get: async <T>(url: string, params?: any): Promise<T> =>{
     const response = await api.get<ApiResponse<T>>(url, { params });
-    return response.data.data as T;
+     return response.data.data as T;
   },
   post: async <T>(url: string, data?: any): Promise<T> => {
     const response = await api.post<ApiResponse<T>>(url, data);

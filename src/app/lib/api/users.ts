@@ -52,8 +52,24 @@ export const usersApi = {
     apiClient.get<any>('/users/activities', { page, limit }),
   
   // Get all users (admin)
-  getAllUsers: (filters: UserFilters = {}) =>
-    apiClient.get<UserResponse>('/users', filters),
+  getAllUsers: async (filters: UserFilters = {}): Promise<UserResponse> => {
+    const response = await apiClient.get<{
+      users: User[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>('/users', filters);
+    
+    // The response from apiClient.get already returns the data property
+    return {
+      users: response.users || [],
+      total: response.total || 0,
+      page: response.page || 1,
+      limit: response.limit || 10,
+      totalPages: response.totalPages || 0,
+    };
+  },
   
   // Get user by ID (admin)
   getUserById: (id: string) =>
