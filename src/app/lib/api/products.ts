@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api/products.ts
 import { apiClient } from './axios-client'
 import { Product, ApiResponse } from '../types'
@@ -26,8 +27,73 @@ export interface ProductResponse {
 
 export const productsApi = {
   // Get all products with filters
-  getProducts: (filters: ProductFilters = {}) =>
-    apiClient.get<ProductResponse>('/products', filters),
+   getProducts: async (filters: ProductFilters = {}): Promise<ProductResponse> => {
+    // Convert filters to query params
+    const params: any = { ...filters }
+    
+    // Handle special cases
+    if (filters.inStock !== undefined) {
+      params.inStock = filters.inStock
+    }
+    if (filters.isFeatured !== undefined) {
+      params.isFeatured = filters.isFeatured
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      params.tags = filters.tags.join(',')
+    }
+    
+    // Make the API call
+    const response = await apiClient.get<{
+      data: Product[]
+      meta?: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+      }
+    }>('/products', params)
+    
+    // Handle different response structures
+    let products: Product[] = []
+    let total = 0
+    let page = filters.page || 1
+    let limit = filters.limit || 10
+    let totalPages = 0
+    
+    if (Array.isArray(response)) {
+      // If response is directly an array
+      products = response
+      total = response.length
+      totalPages = Math.ceil(total / limit)
+    } else if (response && typeof response === 'object') {
+      // If response has data property
+      if (Array.isArray(response.data)) {
+        products = response.data
+        total = products.length
+        totalPages = Math.ceil(total / limit)
+      } else if (response.data && Array.isArray(response.data)) {
+        products = response.data
+        total = products.length
+        totalPages = Math.ceil(total / limit)
+      }
+      
+      // Check for meta info
+      if (response.meta) {
+        page = response.meta.page || page
+        limit = response.meta.limit || limit
+        total = response.meta.total || total
+        totalPages = response.meta.totalPages || totalPages
+      }
+    }
+    
+    return {
+      products,
+      total,
+      page,
+      limit,
+      totalPages,
+    }
+  },
   
   // Get featured products
   getFeaturedProducts: () =>

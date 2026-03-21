@@ -10,13 +10,14 @@ import {
   Check,
   Star
 } from "lucide-react"
-import { Category } from "../../lib/api/categories"
+
 import { Button } from "../ui/button"
 import { Checkbox } from "../ui/checkbox"
 import { Label } from "../ui/label"
 import { Separator } from "../ui/separator"
 import { Slider } from "@/src/app/components/ui/slider"
 import { RadioGroup, RadioGroupItem } from "@/src/app/components/ui/radio-group"
+import { Category } from "../../lib/types"
 
 
 interface ProductsFiltersProps {
