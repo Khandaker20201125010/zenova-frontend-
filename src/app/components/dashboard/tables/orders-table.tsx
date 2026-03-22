@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   ColumnDef,
@@ -100,171 +100,199 @@ export function OrdersTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    try {
-      await ordersApi.updateOrderStatus(orderId, newStatus)
-      toast({
-        title: "Status updated",
-        description: `Order status changed to ${newStatus}`,
-      })
-      onRefresh()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive",
-      })
+  // Define select header component with error handling
+  const SelectHeader = useCallback(({ table }: any) => {
+    if (!table) {
+      return <input type="checkbox" className="rounded border-gray-300" disabled />
     }
-  }
-
-  const columns: ColumnDef<Order>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
+    
+    try {
+      const isAllSelected = table.getIsAllPageRowsSelected?.() ?? false
+      const toggleAllHandler = table.getToggleAllPageRowsSelectedHandler?.()
+      
+      return (
         <input
           type="checkbox"
           className="rounded border-gray-300"
-          checked={table.getIsAllPageRowsSelected()}
-          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          checked={isAllSelected}
+          onChange={toggleAllHandler}
         />
-      ),
-      cell: ({ row }) => (
+      )
+    } catch (error) {
+      return <input type="checkbox" className="rounded border-gray-300" disabled />
+    }
+  }, [])
+
+  // Define select cell component with error handling
+  const SelectCell = useCallback(({ row }: any) => {
+    if (!row) {
+      return <input type="checkbox" className="rounded border-gray-300" disabled />
+    }
+    
+    try {
+      const isSelected = row.getIsSelected?.() ?? false
+      const toggleHandler = row.getToggleSelectedHandler?.()
+      
+      return (
         <input
           type="checkbox"
           className="rounded border-gray-300"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
+          checked={isSelected}
+          onChange={toggleHandler}
         />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "orderNumber",
-      header: "Order",
-      cell: ({ row }) => {
-        const order = row.original
-        return (
-          <div>
-            <p className="font-medium">#{order.orderNumber || order.id.slice(-8)}</p>
-            <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "user",
-      header: "Customer",
-      cell: ({ row }) => {
-        const user = row.original.user
-        return (
-          <div>
-            <p className="font-medium">{user?.name || 'Guest'}</p>
-            <p className="text-xs text-muted-foreground">{user?.email || 'No email'}</p>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "total",
-      header: "Total",
-      cell: ({ row }) => {
-        const total = row.getValue("total") as number
-        return <span className="font-medium">{formatCurrency(total)}</span>
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as keyof typeof statusColors
-        return (
-          <Badge variant={statusColors[status] as any}>
-            {status}
-          </Badge>
-        )
-      },
-    },
-    {
-      accessorKey: "paymentStatus",
-      header: "Payment",
-      cell: ({ row }) => {
-        const status = row.getValue("paymentStatus") as keyof typeof paymentStatusColors
-        return (
-          <Badge variant={paymentStatusColors[status] as any}>
-            {status}
-          </Badge>
-        )
-      },
-    },
-    {
-      accessorKey: "paymentMethod",
-      header: "Method",
-      cell: ({ row }) => {
-        return row.getValue("paymentMethod") || 'N/A'
-      },
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const order = row.original
+      )
+    } catch (error) {
+      return <input type="checkbox" className="rounded border-gray-300" disabled />
+    }
+  }, [])
 
-        const handleView = () => {
-          router.push(`/admin/orders/${order.id}`)
-        }
-
-        const handleEdit = () => {
-          router.push(`/admin/orders/${order.id}/edit`)
-        }
-
-        const handleUpdateStatus = (status: string) => {
-          handleStatusChange(order.id, status)
-        }
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleView}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleEdit}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Order
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Update Status</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleUpdateStatus("PROCESSING")}>
-                <Package className="mr-2 h-4 w-4" />
-                Processing
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUpdateStatus("SHIPPED")}>
-                <Truck className="mr-2 h-4 w-4" />
-                Shipped
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUpdateStatus("DELIVERED")}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Delivered
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUpdateStatus("CANCELLED")}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancelled
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+  const columns = useMemo<ColumnDef<Order>[]>(
+    () => [
+      {
+        id: "select",
+        header: SelectHeader,
+        cell: SelectCell,
+        enableSorting: false,
+        enableHiding: false,
       },
-    },
-  ]
+      {
+        accessorKey: "orderNumber",
+        header: "Order",
+        cell: ({ row }) => {
+          const order = row.original
+          return (
+            <div>
+              <p className="font-medium">#{order.orderNumber || order.id?.slice(-8) || 'N/A'}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(order.createdAt || new Date().toISOString(), "MMM dd, yyyy")}
+              </p>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "user",
+        header: "Customer",
+        cell: ({ row }) => {
+          const user = row.original.user
+          return (
+            <div>
+              <p className="font-medium">{user?.name || 'Guest'}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || 'No email'}</p>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "total",
+        header: "Total",
+        cell: ({ row }) => {
+          const total = row.getValue("total") as number
+          return <span className="font-medium">{formatCurrency(total || 0)}</span>
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.getValue("status") as keyof typeof statusColors
+          const variant = statusColors[status] || "secondary"
+          return <Badge variant={variant as any}>{status || 'PENDING'}</Badge>
+        },
+      },
+      {
+        accessorKey: "paymentStatus",
+        header: "Payment",
+        cell: ({ row }) => {
+          const status = row.getValue("paymentStatus") as keyof typeof paymentStatusColors
+          const variant = paymentStatusColors[status] || "secondary"
+          return <Badge variant={variant as any}>{status || 'PENDING'}</Badge>
+        },
+      },
+      {
+        accessorKey: "paymentMethod",
+        header: "Method",
+        cell: ({ row }) => {
+          return row.getValue("paymentMethod") || 'N/A'
+        },
+      },
+      {
+        id: "actions",
+        cell: ({ row }) => {
+          const order = row.original
+          if (!order) return null
+
+          const handleView = () => {
+            router.push(`/admin/orders/${order.id}`)
+          }
+
+          const handleEdit = () => {
+            router.push(`/admin/orders/${order.id}/edit`)
+          }
+
+          const handleUpdateStatus = async (status: string) => {
+            try {
+              await ordersApi.updateOrderStatus(order.id, status)
+              toast({
+                title: "Status updated",
+                description: `Order status changed to ${status}`,
+              })
+              onRefresh()
+            } catch (error) {
+              toast({
+                title: "Error",
+                description: "Failed to update order status",
+                variant: "destructive",
+              })
+            }
+          }
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleView}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Order
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleUpdateStatus("PROCESSING")}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Processing
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdateStatus("SHIPPED")}>
+                  <Truck className="mr-2 h-4 w-4" />
+                  Shipped
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdateStatus("DELIVERED")}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Delivered
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdateStatus("CANCELLED")}>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancelled
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        },
+      },
+    ],
+    [SelectHeader, SelectCell, router, toast, onRefresh]
+  )
 
   const table = useReactTable({
-    data,
+    data: data || [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -280,7 +308,23 @@ export function OrdersTable({
     },
     manualPagination: true,
     pageCount: pagination.totalPages,
+    initialState: {
+      pagination: {
+        pageIndex: pagination.page - 1,
+        pageSize: pagination.limit,
+      },
+    },
   })
+
+  // Sync pagination
+  useEffect(() => {
+    if (table && table.getState) {
+      const currentPage = table.getState().pagination.pageIndex + 1
+      if (currentPage !== pagination.page) {
+        table.setPageIndex(pagination.page - 1)
+      }
+    }
+  }, [pagination.page, pagination.limit, table])
 
   if (loading) {
     return (
@@ -290,6 +334,35 @@ export function OrdersTable({
       </div>
     )
   }
+
+  // Safe helper functions
+  const getRowModel = () => {
+    try {
+      return table?.getRowModel?.() || { rows: [] }
+    } catch {
+      return { rows: [] }
+    }
+  }
+
+  const getFilteredSelectedRowModel = () => {
+    try {
+      return table?.getFilteredSelectedRowModel?.() || { rows: [] }
+    } catch {
+      return { rows: [] }
+    }
+  }
+
+  const getHeaderGroups = () => {
+    try {
+      return table?.getHeaderGroups?.() || []
+    } catch {
+      return []
+    }
+  }
+
+  const rows = getRowModel().rows || []
+  const filteredSelectedRows = getFilteredSelectedRowModel().rows || []
+  const headerGroups = getHeaderGroups()
 
   return (
     <div className="space-y-4">
@@ -310,9 +383,9 @@ export function OrdersTable({
         </div>
 
         <div className="flex items-center gap-2">
-          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+          {filteredSelectedRows.length > 0 && (
             <Button variant="outline" size="sm">
-              Bulk Actions ({table.getFilteredSelectedRowModel().rows.length})
+              Bulk Actions ({filteredSelectedRows.length})
             </Button>
           )}
           <Button variant="outline" size="icon">
@@ -325,26 +398,32 @@ export function OrdersTable({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+            {headerGroups.length > 0 ? (
+              headerGroups.map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableHead>Loading...</TableHead>
               </TableRow>
-            ))}
+            )}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            {rows.length > 0 ? (
+              rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
@@ -395,13 +474,13 @@ export function OrdersTable({
                   pageNum = pagination.page - 3 + i
                 }
               }
+              if (pageNum > pagination.totalPages) return null
               return (
                 <Button
                   key={pageNum}
                   variant={pagination.page === pageNum ? "default" : "outline"}
                   size="sm"
                   onClick={() => onPageChange(pageNum)}
-                  disabled={pageNum > pagination.totalPages}
                 >
                   {pageNum}
                 </Button>

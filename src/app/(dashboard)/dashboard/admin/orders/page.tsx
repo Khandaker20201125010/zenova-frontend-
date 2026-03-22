@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Button } from "@/src/app/components/ui/button"
 import { Input } from "@/src/app/components/ui/input"
 import { Search } from "lucide-react"
@@ -14,24 +15,11 @@ import {
 } from "@/src/app/components/ui/select"
 import { useToast } from "@/src/app/hooks/use-toast"
 import { Order } from "@/src/app/lib/types"
-import { ordersApi } from "@/src/app/lib/api/orders"
+import { ordersApi, OrderFilters } from "@/src/app/lib/api/orders"
 import { OrdersTable } from "@/src/app/components/dashboard/tables/orders-table"
 
-
-// Define OrderFilters interface
-export interface OrderFilters {
-    page?: number
-    limit?: number
-    search?: string
-    status?: string
-    paymentStatus?: string
-    startDate?: string
-    endDate?: string
-    sortBy?: string
-    sortOrder?: 'asc' | 'desc'
-}
-
 export default function AdminOrdersPage() {
+    const { data: session, status: sessionStatus } = useSession()
     const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [filters, setFilters] = useState<OrderFilters>({
@@ -42,6 +30,8 @@ export default function AdminOrdersPage() {
         paymentStatus: "",
         startDate: "",
         endDate: "",
+        sortBy: "createdAt",
+        sortOrder: "desc",
     })
     const [pagination, setPagination] = useState({
         page: 1,
@@ -52,29 +42,56 @@ export default function AdminOrdersPage() {
     const { toast } = useToast()
 
     useEffect(() => {
-        fetchOrders()
-    }, [filters])
+        if (sessionStatus === 'authenticated' && session?.user?.role === 'ADMIN') {
+            fetchOrders()
+        }
+    }, [filters, sessionStatus, session])
 
     const fetchOrders = async () => {
         try {
             setLoading(true)
+            console.log('Fetching orders with filters:', filters)
+            
             const response = await ordersApi.getAllOrders(filters.page, filters.limit, filters)
-            setOrders(response.orders)
+            console.log('API Response:', response)
+            
+            setOrders(response.orders || [])
             setPagination({
-                page: response.page,
-                limit: response.limit,
-                total: response.total,
-                totalPages: response.totalPages,
+                page: response.page || 1,
+                limit: response.limit || 10,
+                total: response.total || 0,
+                totalPages: response.totalPages || 0,
             })
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error fetching orders:', error)
             toast({
                 title: "Error",
-                description: "Failed to load orders",
+                description: error?.message || "Failed to load orders",
                 variant: "destructive",
             })
         } finally {
             setLoading(false)
         }
+    }
+
+    if (sessionStatus === 'loading') {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    if (session?.user?.role !== 'ADMIN') {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Card>
+                    <CardContent className="p-6">
+                        <p className="text-red-500">Access Denied. Admin privileges required.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
@@ -84,6 +101,9 @@ export default function AdminOrdersPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>All Orders</CardTitle>
+                    {!loading && orders.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No orders found.</p>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {/* Filters */}
