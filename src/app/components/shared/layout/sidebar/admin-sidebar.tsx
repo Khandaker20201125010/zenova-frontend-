@@ -34,7 +34,7 @@ const adminNavItems = [
   { href: "/dashboard/admin/users", label: "Users", icon: Users, badge: "12" },
   { href: "/dashboard/admin/products", label: "Products", icon: Package },
   { href: "/dashboard/admin/orders", label: "Orders", icon: ShoppingCart, badge: "5" },
-  { href: "/dashboard/admin/blog", label: "Blog", icon: FileText },
+  { href: "/dashboard/admin/blogs", label: "Blog", icon: FileText },
   { href: "/dashboard/admin/categories", label: "Categories", icon: Tag },
   { href: "/dashboard/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/admin/payments", label: "Payments", icon: CreditCard },

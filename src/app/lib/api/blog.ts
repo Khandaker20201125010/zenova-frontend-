@@ -90,8 +90,8 @@ export const blogsApi = {
   },
   
   // Get blogs statistics (admin)
-  getBlogStats: async () => {
-    const response = await apiClient.get<any>('/blogs/stats');
-    return response.data || response;
+   getBlogStats: async (): Promise<any> => {
+    const response = await apiClient.get<any>('/blogs/stats')
+    return response.data || response
   },
 }
