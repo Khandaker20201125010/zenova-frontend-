@@ -74,59 +74,86 @@ export default function AdminBlogCreatePage() {
     }))
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
 
-    try {
-      setUploadingImage(true)
-      const response = await blogsApi.uploadCoverImage(file)
-      setFormData(prev => ({ ...prev, coverImage: response.url || response.secure_url || response }))
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload image",
-        variant: "destructive",
-      })
-    } finally {
-      setUploadingImage(false)
-    }
-  }
+  console.log('Uploading image:', file.name)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  try {
+    setUploadingImage(true)
+    const response = await blogsApi.uploadCoverImage(file)
+    console.log('Upload response:', response)
     
-    if (!formData.title || !formData.content) {
-      toast({
-        title: "Error",
-        description: "Title and content are required",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setLoading(true)
-      await blogsApi.createPost(formData)
-      toast({
-        title: "Success",
-        description: "Blog post created successfully",
-      })
-      router.push("/dashboard/admin/blogs")
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to create blog post",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+    // The response structure might be nested
+    const imageUrl = response.url || response.secure_url || response.data?.url || response
+    console.log('Image URL:', imageUrl)
+    
+    setFormData(prev => ({ ...prev, coverImage: imageUrl }))
+    toast({
+      title: "Success",
+      description: "Image uploaded successfully",
+    })
+  } catch (error) {
+    console.error('Upload error:', error)
+    toast({
+      title: "Error",
+      description: "Failed to upload image",
+      variant: "destructive",
+    })
+  } finally {
+    setUploadingImage(false)
   }
+}
+
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  
+  if (!formData.title || !formData.content) {
+    toast({
+      title: "Error",
+      description: "Title and content are required",
+      variant: "destructive",
+    })
+    return
+  }
+
+  try {
+    setLoading(true)
+    
+    const postData = {
+      title: formData.title,
+      excerpt: formData.excerpt,
+      content: formData.content,
+      coverImage: formData.coverImage,
+      category: formData.category,
+      tags: formData.tags,
+      isPublished: formData.isPublished,
+      seoTitle: formData.seoTitle,
+      seoDescription: formData.seoDescription,
+      seoKeywords: formData.seoKeywords,
+    }
+    
+    console.log('Creating blog post with data:', postData)
+    
+    await blogsApi.createPost(postData)
+    
+    toast({
+      title: "Success",
+      description: "Blog post created successfully",
+    })
+    router.push("/dashboard/admin/blogs")
+  } catch (error: any) {
+    console.error('Create error:', error)
+    toast({
+      title: "Error",
+      description: error?.message || "Failed to create blog post",
+      variant: "destructive",
+    })
+  } finally {
+    setLoading(false)
+  }
+}
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">

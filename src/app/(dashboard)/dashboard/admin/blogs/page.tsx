@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/app/components/ui/card"
 import { Input } from "@/src/app/components/ui/input"
 import { Button } from "@/src/app/components/ui/button"
-import { Plus, Search, Edit, Trash2, Eye, MoreHorizontal } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Eye, MoreHorizontal, ImageIcon, Upload } from "lucide-react"
 import { useToast } from "@/src/app/hooks/use-toast"
 import {
   Table,
@@ -25,6 +25,7 @@ import {
 } from "@/src/app/components/ui/dropdown-menu"
 import { Badge } from "@/src/app/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/app/components/ui/avatar"
+import Image from "next/image"
 
 import { BlogPost } from "@/src/app/lib/types"
 import { formatDate } from "@/src/app/lib/utils/helpers"
@@ -109,6 +110,11 @@ export default function AdminBlogsPage() {
     router.push("/dashboard/admin/blogs/create")
   }
 
+  // Helper function to check if image URL is valid
+  const isValidImageUrl = (url: string) => {
+    return url && (url.startsWith('http') || url.startsWith('/uploads/'))
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -143,43 +149,72 @@ export default function AdminBlogsPage() {
           </div>
 
           {/* Posts Table */}
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">Image</TableHead>
                   <TableHead>Post</TableHead>
                   <TableHead>Author</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Views</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : posts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No blog posts found
                     </TableCell>
                   </TableRow>
                 ) : (
                   posts.map((post) => (
                     <TableRow key={post.id}>
+                      {/* Image Column */}
+                      <TableCell className="w-16">
+                        {post.coverImage && isValidImageUrl(post.coverImage) ? (
+                          <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted">
+                            <Image
+                              src={post.coverImage}
+                              alt={post.title}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
+                      
+                      {/* Post Column */}
                       <TableCell>
                         <div>
                           <p className="font-medium line-clamp-1">{post.title}</p>
                           <p className="text-sm text-muted-foreground line-clamp-1">
                             {post.excerpt || "No excerpt"}
                           </p>
+                          {!post.coverImage && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1 mt-1">
+                              <Upload className="h-3 w-3" />
+                              No image uploaded
+                            </span>
+                          )}
                         </div>
                       </TableCell>
+                      
+                      {/* Author Column */}
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
@@ -191,16 +226,26 @@ export default function AdminBlogsPage() {
                           <span className="text-sm">{post.author?.name || "Unknown"}</span>
                         </div>
                       </TableCell>
+                      
+                      {/* Category Column */}
                       <TableCell>
                         <Badge variant="outline">{post.category || "Uncategorized"}</Badge>
                       </TableCell>
+                      
+                      {/* Status Column */}
                       <TableCell>
                         <Badge variant={post.isPublished ? "default" : "secondary"}>
                           {post.isPublished ? "Published" : "Draft"}
                         </Badge>
                       </TableCell>
+                      
+                      {/* Views Column */}
                       <TableCell>{post.views || 0}</TableCell>
+                      
+                      {/* Date Column */}
                       <TableCell>{formatDate(post.createdAt, "MMM dd, yyyy")}</TableCell>
+                      
+                      {/* Actions Column */}
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -218,6 +263,12 @@ export default function AdminBlogsPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
+                            {!post.coverImage && (
+                              <DropdownMenuItem onClick={() => handleEdit(post.id)}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Add Image
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDelete(post.id)}

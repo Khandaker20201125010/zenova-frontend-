@@ -84,10 +84,13 @@ export const blogsApi = {
   },
   
   // Upload cover image
-  uploadCoverImage: async (file: File) => {
-    const response = await apiClient.upload<any>('/blogs/upload', file);
+    uploadCoverImage: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('coverImage', file);
+    const response = await apiClient.upload<any>('/blogs/upload', file, 'coverImage');
     return response.data || response;
   },
+  
   
   // Get blogs statistics (admin)
    getBlogStats: async (): Promise<any> => {

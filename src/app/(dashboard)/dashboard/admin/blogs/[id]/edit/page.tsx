@@ -66,7 +66,7 @@ export default function AdminBlogEditPage() {
         description: "Failed to load blog post",
         variant: "destructive",
       })
-      router.push("/dashboard/admin/blog")
+      router.push("/dashboard/admin/blogs")
     } finally {
       setFetching(false)
     }
@@ -117,12 +117,14 @@ export default function AdminBlogEditPage() {
     try {
       setUploadingImage(true)
       const response = await blogsApi.uploadCoverImage(file)
-      setFormData(prev => ({ ...prev, coverImage: response.url || response.secure_url || response }))
+      const imageUrl = response.url || response.secure_url || response.data?.url || response
+      setFormData(prev => ({ ...prev, coverImage: imageUrl }))
       toast({
         title: "Success",
         description: "Image uploaded successfully",
       })
     } catch (error) {
+      console.error('Upload error:', error)
       toast({
         title: "Error",
         description: "Failed to upload image",
@@ -133,47 +135,46 @@ export default function AdminBlogEditPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!formData.title || !formData.content) {
-      toast({
-        title: "Error",
-        description: "Title and content are required",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setLoading(true)
-      await blogsApi.updatePost(formData.id, {
-        title: formData.title,
-        excerpt: formData.excerpt,
-        content: formData.content,
-        coverImage: formData.coverImage,
-        category: formData.category,
-        tags: formData.tags,
-        isPublished: formData.isPublished,
-        seoTitle: formData.seoTitle,
-        seoDescription: formData.seoDescription,
-        seoKeywords: formData.seoKeywords,
-      })
-      toast({
-        title: "Success",
-        description: "Blog post updated successfully",
-      })
-      router.push("/dashboard/admin/blog")
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to update blog post",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  
+  if (!formData.title || !formData.content) {
+    toast({
+      title: "Error",
+      description: "Title and content are required",
+      variant: "destructive",
+    })
+    return
   }
+
+  try {
+    setLoading(true)
+    
+    // Prepare data for API - exclude id from the update data
+    const { id, ...postData } = formData
+    
+    console.log('Updating blog post ID:', id)
+    console.log('Update data:', postData)
+    
+    // FIXED: Use updatePost instead of createPost
+    await blogsApi.updatePost(id, postData)
+    
+    toast({
+      title: "Success",
+      description: "Blog post updated successfully",
+    })
+    router.push("/dashboard/admin/blogs")
+  } catch (error: any) {
+    console.error('Update error:', error)
+    toast({
+      title: "Error",
+      description: error?.message || "Failed to update blog post",
+      variant: "destructive",
+    })
+  } finally {
+    setLoading(false)
+  }
+}
 
   if (fetching) {
     return (
@@ -199,7 +200,7 @@ export default function AdminBlogEditPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Main Content - Same as Create Page */}
+          {/* Main Content */}
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
@@ -298,7 +299,7 @@ export default function AdminBlogEditPage() {
             </Card>
           </div>
 
-          {/* Sidebar - Same as Create Page */}
+          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
