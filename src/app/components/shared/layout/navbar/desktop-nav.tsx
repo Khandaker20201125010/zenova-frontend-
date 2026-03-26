@@ -200,12 +200,7 @@ const adminMenuItems = [
     icon: FileSpreadsheet,
     description: "System reports"
   },
-  {
-    label: "Settings",
-    href: "/dashboard/admin/settings",
-    icon: Settings,
-    description: "System settings"
-  }
+ 
 ]
 
 export function DesktopNav({ 

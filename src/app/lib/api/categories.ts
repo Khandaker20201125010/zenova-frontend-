@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/api/categories.ts
 import { apiClient } from './axios-client'
 import { Category } from '../types'
 
@@ -97,9 +96,9 @@ export const categoriesApi = {
       }
       
       return response || null
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating category:', error)
-      return null
+      throw error
     }
   },
   
@@ -112,9 +111,9 @@ export const categoriesApi = {
       }
       
       return response || null
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating category:', error)
-      return null
+      throw error
     }
   },
   
@@ -122,9 +121,22 @@ export const categoriesApi = {
     try {
       await apiClient.delete(`/categories/${id}`)
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error)
-      return false
+      throw error
+    }
+  },
+  
+  uploadCategoryImage: async (file: File): Promise<string> => {
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const response = await apiClient.upload<any>('/categories/upload', file, 'image')
+      const imageUrl = response.url || response.secure_url || response.data?.url || response
+      return imageUrl
+    } catch (error) {
+      console.error('Error uploading category image:', error)
+      throw error
     }
   },
 }
