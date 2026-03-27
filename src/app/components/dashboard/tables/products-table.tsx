@@ -70,12 +70,12 @@ interface ProductsTableProps {
   onRefresh: () => void
 }
 
-export function ProductsTable({ 
-  data, 
-  loading = false, 
-  pagination, 
+export function ProductsTable({
+  data,
+  loading = false,
+  pagination,
   onPageChange,
-  onRefresh 
+  onRefresh
 }: ProductsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -99,7 +99,7 @@ export function ProductsTable({
       if (typeof table.getIsAllPageRowsSelected === 'function') {
         isAllSelected = table.getIsAllPageRowsSelected() ?? false
       }
-      
+
       if (typeof table.getToggleAllPageRowsSelectedHandler === 'function') {
         toggleAllHandler = table.getToggleAllPageRowsSelectedHandler()
       }
@@ -108,7 +108,7 @@ export function ProductsTable({
       console.debug('Table selection methods not ready yet')
       return <input type="checkbox" className="rounded border-gray-300" disabled />
     }
-    
+
     return (
       <input
         type="checkbox"
@@ -135,7 +135,7 @@ export function ProductsTable({
       if (typeof row.getIsSelected === 'function') {
         isSelected = row.getIsSelected() ?? false
       }
-      
+
       if (typeof row.getToggleSelectedHandler === 'function') {
         toggleHandler = row.getToggleSelectedHandler()
       }
@@ -144,7 +144,7 @@ export function ProductsTable({
       console.debug('Row selection methods not ready yet')
       return <input type="checkbox" className="rounded border-gray-300" disabled />
     }
-    
+
     return (
       <input
         type="checkbox"
@@ -174,9 +174,9 @@ export function ProductsTable({
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center overflow-hidden">
                 {product.images && product.images[0] ? (
-                  <Image 
-                    src={product.images[0]} 
-                    alt={product.name} 
+                  <Image
+                    src={product.images[0]}
+                    alt={product.name}
                     width={40}
                     height={40}
                     className="h-full w-full object-cover"
@@ -278,8 +278,8 @@ export function ProductsTable({
           const product = row.original
           if (!product) return null
 
-          const handleEdit = () => {
-            router.push(`/admin/products/${product.id}/edit`)
+          const handleEdit = (id: string) => {
+            router.push(`/dashboard/admin/products/${id}/edit`)
           }
 
           const handleView = () => {
@@ -340,9 +340,9 @@ export function ProductsTable({
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleEdit}>
+                <DropdownMenuItem onClick={() => handleEdit(product.id)}>
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit Product
+                  Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDuplicate}>
                   <Copy className="mr-2 h-4 w-4" />
@@ -509,9 +509,9 @@ export function ProductsTable({
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     )
                   })}

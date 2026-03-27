@@ -16,11 +16,13 @@ import { useToast } from "@/src/app/hooks/use-toast"
 import { Product } from "@/src/app/lib/types"
 import { ProductFilters, productsApi } from "@/src/app/lib/api/products"
 import { ProductsTable } from "@/src/app/components/dashboard/tables/products-table"
+import { useRouter } from "next/navigation"
 
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
+     const router = useRouter();
     const [filters, setFilters] = useState<ProductFilters>({
         page: 1,
         limit: 10,
@@ -70,10 +72,10 @@ export default function AdminProductsPage() {
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Product
-                </Button>
+                 <Button onClick={() => router.push("/dashboard/admin/products/create")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
             </div>
 
             <Card>
