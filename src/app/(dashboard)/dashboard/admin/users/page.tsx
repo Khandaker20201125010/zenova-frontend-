@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/app/components/ui/card"
 import { Input } from "@/src/app/components/ui/input"
 import { Button } from "@/src/app/components/ui/button"
-import { Plus, Search } from "lucide-react"
+import { Search, Users, Shield, UserCog, Download, RefreshCw, AlertCircle } from "lucide-react"
 import { useToast } from "@/src/app/hooks/use-toast"
 import {
   Select,
@@ -13,9 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/app/components/ui/select"
+import { Alert, AlertDescription } from "@/src/app/components/ui/alert"
 import { User } from "@/src/app/lib/types"
 import { UserFilters, usersApi } from "@/src/app/lib/api/users"
 import { UsersTable } from "@/src/app/components/dashboard/tables/users-table"
+
+const PRIMARY_ADMIN_EMAIL = "admin@zenova.com"
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -41,31 +44,27 @@ export default function AdminUsersPage() {
     fetchUsers()
   }, [filters])
 
-const fetchUsers = async () => {
-  try {
-    setLoading(true)
-    console.log('Fetching users with filters:', filters)
-    const response = await usersApi.getAllUsers(filters)
-    console.log('API Response:', response)
-    
-    setUsers(response.users || [])
-    setPagination({
-      page: response.page || 1,
-      limit: response.limit || 10,
-      total: response.total || 0,
-      totalPages: response.totalPages || 0,
-    })
-  } catch (error) {
-    console.error('Error fetching users:', error)
-    toast({
-      title: "Error",
-      description: "Failed to load users",
-      variant: "destructive",
-    })
-  } finally {
-    setLoading(false)
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await usersApi.getAllUsers(filters)
+      setUsers(response.users || [])
+      setPagination({
+        page: response.page || 1,
+        limit: response.limit || 10,
+        total: response.total || 0,
+        totalPages: response.totalPages || 0,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   const handleSearch = (search: string) => {
     setFilters({ ...filters, search, page: 1 })
@@ -83,42 +82,155 @@ const fetchUsers = async () => {
     setFilters({ ...filters, page })
   }
 
+  // Statistics
+  const stats = {
+    total: users.length,
+    admin: users.filter(u => u.role === "ADMIN").length,
+    manager: users.filter(u => u.role === "MANAGER").length,
+    user: users.filter(u => u.role === "USER").length,
+    active: users.filter(u => u.status === "ACTIVE").length,
+    inactive: users.filter(u => u.status === "INACTIVE").length,
+    suspended: users.filter(u => u.status === "SUSPENDED").length,
+  }
+
+  // Check if primary admin exists
+  const hasPrimaryAdmin = users.some(u => u.email === PRIMARY_ADMIN_EMAIL)
+
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Users</h2>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+    <div className="flex-1 space-y-6 p-6 md:p-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage user accounts, roles, and permissions
+          </p>
+        </div>
+      </div>
+      {/* Stats Grid */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Admins</p>
+                <p className="text-xl font-bold text-destructive">{stats.admin}</p>
+              </div>
+              <Shield className="h-5 w-5 text-destructive" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Managers</p>
+                <p className="text-xl font-bold text-blue-500">{stats.manager}</p>
+              </div>
+              <UserCog className="h-5 w-5 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Users</p>
+                <p className="text-xl font-bold text-green-500">{stats.user}</p>
+              </div>
+              <Users className="h-5 w-5 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Active</p>
+                <p className="text-xl font-bold text-green-600">{stats.active}</p>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Inactive</p>
+                <p className="text-xl font-bold text-yellow-600">{stats.inactive}</p>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Suspended</p>
+                <p className="text-xl font-bold text-red-600">{stats.suspended}</p>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-red-500" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Users Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle>All Users</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchUsers}
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-3 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users..."
-                  className="pl-8"
+                  placeholder="Search by name or email..."
+                  className="pl-9"
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
             </div>
             <div className="flex gap-2">
-              {/* Role Filter - Fixed */}
-              <Select 
-                value={filters.role || "all_roles"} 
+              <Select
+                value={filters.role || "all_roles"}
                 onValueChange={(value) => handleRoleFilter(value === "all_roles" ? "" : value)}
               >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="All Roles" />
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_roles">All Roles</SelectItem>
@@ -128,13 +240,12 @@ const fetchUsers = async () => {
                 </SelectContent>
               </Select>
 
-              {/* Status Filter - Fixed */}
-              <Select 
-                value={filters.status || "all_status"} 
+              <Select
+                value={filters.status || "all_status"}
                 onValueChange={(value) => handleStatusFilter(value === "all_status" ? "" : value)}
               >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_status">All Status</SelectItem>
