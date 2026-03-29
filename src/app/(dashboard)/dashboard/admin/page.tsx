@@ -82,7 +82,7 @@ useEffect(() => {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user.name}!
+            Welcome back, {user.name}! ...
           </h2>
           <p className="text-muted-foreground">
             Here's what's happening with your account today.
