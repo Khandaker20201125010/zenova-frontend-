@@ -1,62 +1,56 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card"
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 
+interface UserGrowthChartProps {
+  data?: Array<{ date: string; users: number }>
+}
 
-const userData = [
-  { month: "Jan", users: 400, newUsers: 240 },
-  { month: "Feb", users: 700, newUsers: 139 },
-  { month: "Mar", users: 1000, newUsers: 200 },
-  { month: "Apr", users: 1200, newUsers: 278 },
-  { month: "May", users: 1500, newUsers: 189 },
-  { month: "Jun", users: 1800, newUsers: 239 },
-  { month: "Jul", users: 2200, newUsers: 349 },
-  { month: "Aug", users: 2500, newUsers: 430 },
-  { month: "Sep", users: 3000, newUsers: 200 },
-  { month: "Oct", users: 3500, newUsers: 278 },
-  { month: "Nov", users: 4000, newUsers: 189 },
-  { month: "Dec", users: 4500, newUsers: 239 },
-]
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-3 shadow-lg">
+        <p className="font-medium mb-1">{label}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">New Users:</span>
+          <span className="font-bold text-primary">
+            {payload[0].value?.toLocaleString()}
+          </span>
+        </div>
+      </div>
+    )
+  }
+  return null
+}
 
-export function UserGrowthChart() {
+export function UserGrowthChart({ data }: UserGrowthChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[300px] items-center justify-center">
+        <p className="text-muted-foreground">No user growth data available</p>
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>User Growth</CardTitle>
-        <CardDescription>New user registrations and total users</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={userData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-            <XAxis 
-              dataKey="month" 
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-            />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-            />
-            <Tooltip />
-            <Legend />
-            <Bar 
-              dataKey="newUsers" 
-              name="New Users"
-              fill="hsl(var(--primary))"
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar 
-              dataKey="users" 
-              name="Total Users"
-              fill="hsl(var(--primary))"
-              fillOpacity={0.3}
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.5} />
+        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+        <Tooltip content={<CustomTooltip />} />
+        <Legend />
+        <Line 
+          type="monotone" 
+          dataKey="users" 
+          name="New Users"
+          stroke="hsl(var(--primary))" 
+          strokeWidth={3} 
+          dot={{ fill: "hsl(var(--primary))", r: 4, strokeWidth: 2 }}
+          activeDot={{ r: 6 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
   )
 }

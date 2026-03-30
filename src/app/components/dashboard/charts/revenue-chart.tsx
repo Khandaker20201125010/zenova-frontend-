@@ -1,125 +1,51 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// components/dashboard/charts/revenue-chart.tsx
 "use client"
 
-import { useState } from "react"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select"
-import { Skeleton } from "../../ui/skeleton"
-import { useDashboardQuery } from "@/src/app/hooks/use-query"
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from "recharts"
 
-const revenueData = [
-  { month: "Jan", revenue: 4000, orders: 2400 },
-  { month: "Feb", revenue: 3000, orders: 1398 },
-  { month: "Mar", revenue: 9800, orders: 2000 },
-  { month: "Apr", revenue: 3908, orders: 2780 },
-  { month: "May", revenue: 4800, orders: 1890 },
-  { month: "Jun", revenue: 3800, orders: 2390 },
-  { month: "Jul", revenue: 4300, orders: 3490 },
-  { month: "Aug", revenue: 2400, orders: 4300 },
-  { month: "Sep", revenue: 9800, orders: 2000 },
-  { month: "Oct", revenue: 3908, orders: 2780 },
-  { month: "Nov", revenue: 4800, orders: 1890 },
-  { month: "Dec", revenue: 3800, orders: 2390 },
-]
+interface RevenueChartProps {
+  data?: Array<{ date: string; revenue: number }>
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-background border rounded-lg shadow-lg p-4">
-        <p className="font-semibold">{label}</p>
-        <p className="text-sm text-blue-500">
-          Revenue: <span className="font-bold">${payload[0].value}</span>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Orders: <span className="font-bold">{payload[1].value}</span>
-        </p>
+      <div className="rounded-lg border bg-background p-3 shadow-lg">
+        <p className="font-medium mb-1">{label}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">Revenue:</span>
+          <span className="font-bold text-primary">
+            ${payload[0].value?.toLocaleString()}
+          </span>
+        </div>
       </div>
     )
   }
   return null
 }
 
-export function RevenueChart() {
-  const [timeRange, setTimeRange] = useState("year")
-  const { data: analytics, isLoading } = useDashboardQuery()
+export function RevenueChart({ data }: RevenueChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[300px] items-center justify-center">
+        <p className="text-muted-foreground">No revenue data available</p>
+      </div>
+    )
+  }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Revenue Overview</CardTitle>
-          <CardDescription>Monthly revenue and orders</CardDescription>
-        </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="week">Last 7 days</SelectItem>
-            <SelectItem value="month">This month</SelectItem>
-            <SelectItem value="quarter">This quarter</SelectItem>
-            <SelectItem value="year">This year</SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="space-y-4 w-full">
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-[250px] w-full" />
-            </div>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-              <XAxis 
-                dataKey="month" 
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-              />
-              <YAxis 
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickFormatter={(value) => `$${value}`}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.3}
-                strokeWidth={2}
-                name="Revenue"
-              />
-              <Line
-                type="monotone"
-                dataKey="orders"
-                stroke="hsl(var(--accent))"
-                strokeWidth={2}
-                name="Orders"
-                dot={{ r: 4 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.5} />
+        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value.toLocaleString()}`} />
+        <Tooltip content={<CustomTooltip />} />
+        <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={`hsl(var(--primary) / ${0.3 + (index / data.length) * 0.7})`} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   )
 }

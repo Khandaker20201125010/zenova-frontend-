@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/api/dashboard.ts
 import { apiClient } from './axios-client'
 
 export interface DashboardStats {
@@ -33,34 +32,90 @@ export interface SalesData {
 
 export const dashboardApi = {
   // User dashboard
-  getUserDashboard: () =>
-    apiClient.get<any>('/dashboard/user'),
+  getUserDashboard: async () => {
+    try {
+      const response = await apiClient.get<any>('/dashboard/user')
+      return response
+    } catch (error) {
+      console.error('Error fetching user dashboard:', error)
+      throw error
+    }
+  },
   
   // Manager dashboard
-  getManagerDashboard: () =>
-    apiClient.get<any>('/dashboard/manager'),
+  getManagerDashboard: async () => {
+    try {
+      const response = await apiClient.get<any>('/dashboard/manager')
+      return response
+    } catch (error) {
+      console.error('Error fetching manager dashboard:', error)
+      throw error
+    }
+  },
   
   // Admin dashboard
-  getAdminDashboard: () =>
-    apiClient.get<DashboardStats>('/dashboard/admin'),
+  getAdminDashboard: async () => {
+    try {
+      const response = await apiClient.get<any>('/dashboard/admin')
+      return response
+    } catch (error) {
+      console.error('Error fetching admin dashboard:', error)
+      throw error
+    }
+  },
   
   // Analytics data
-  getAnalytics: (range: string = 'month') =>
-    apiClient.get<any>(`/dashboard/analytics?range=${range}`),
+  getAnalytics: async (range: string = 'month') => {
+    try {
+      const response = await apiClient.get<any>(`/dashboard/analytics?timeRange=${range}`)
+      return response
+    } catch (error) {
+      console.error('Error fetching analytics:', error)
+      throw error
+    }
+  },
   
   // Revenue analytics
-  getRevenueAnalytics: (range: string = 'month') =>
-    apiClient.get<RevenueData[]>(`/dashboard/analytics/revenue?range=${range}`),
+  getRevenueAnalytics: async (range: string = 'month') => {
+    try {
+      const response = await apiClient.get<any>(`/dashboard/analytics/revenue?timeRange=${range}`)
+      return response
+    } catch (error) {
+      console.error('Error fetching revenue analytics:', error)
+      throw error
+    }
+  },
   
   // User analytics
-  getUserAnalytics: (range: string = 'month') =>
-    apiClient.get<UserGrowthData[]>(`/dashboard/analytics/users?range=${range}`),
+  getUserAnalytics: async (range: string = 'month') => {
+    try {
+      const response = await apiClient.get<any>(`/dashboard/analytics/users?timeRange=${range}`)
+      return response
+    } catch (error) {
+      console.error('Error fetching user analytics:', error)
+      throw error
+    }
+  },
   
   // Sales analytics
-  getSalesAnalytics: (range: string = 'month') =>
-    apiClient.get<SalesData[]>(`/dashboard/analytics/sales?range=${range}`),
+  getSalesAnalytics: async (range: string = 'month') => {
+    try {
+      const response = await apiClient.get<any>(`/dashboard/analytics/sales?timeRange=${range}`)
+      return response
+    } catch (error) {
+      console.error('Error fetching sales analytics:', error)
+      throw error
+    }
+  },
   
   // System status
-  getSystemStatus: () =>
-    apiClient.get<any>('/dashboard/system-status'),
+  getSystemStatus: async () => {
+    try {
+      const response = await apiClient.get<any>('/dashboard/system-status')
+      return response
+    } catch (error) {
+      console.error('Error fetching system status:', error)
+      throw error
+    }
+  },
 }
