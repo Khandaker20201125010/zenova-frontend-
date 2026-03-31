@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
+import { Package } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from "recharts"
 
 interface RevenueChartProps {
@@ -27,8 +28,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function RevenueChart({ data }: RevenueChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center">
-        <p className="text-muted-foreground">No revenue data available</p>
+       <div className="flex h-[300px] flex-col items-center justify-center gap-4">
+        <div className="rounded-full bg-muted/50 p-4">
+          <Package className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <p className="text-sm text-muted-foreground">No sales data available</p>
       </div>
     )
   }
